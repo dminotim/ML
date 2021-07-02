@@ -11,25 +11,12 @@ class dmLinearMultLayer : public dmLayer
 {
 public:
 	dmLinearMultLayer(const size_t size, const double defaultVal)
-		: dmLayer(size, size),
-		m_weights(size, defaultVal),
+		: dmLayer(size, size, dmLayerType::LINEAR_MULT),
+		m_weights(nullptr, size),
 		m_z(size),
 		m_dW(size),
-		m_derivatives(size)
+		m_grads(nullptr, size)
 	{
-		for (double& v : m_weights)
-		{
-			v = defaultVal;
-		}
-	}
-
-	void Init(const std::function<double()>& rnd)
-	{
-		m_weights = std::vector<double>(m_outputSize);
-		for (double& v : m_weights)
-		{
-			v = rnd();
-		}
 	}
 
 	void Forward(const std::vector<double>& input)
@@ -40,20 +27,13 @@ public:
 		}
 	}
 
-	std::vector<double> Backprop(const std::vector<double>& input,
+	void Backprop(const std::vector<double>& input,
 		const std::vector<double>& nextLayerGrads)
 	{
 		for (size_t i = 0; i < nextLayerGrads.size(); ++i)
 		{
 			m_dW[i] = nextLayerGrads[i] * m_weights[i];
-			m_derivatives[i].m_grad = input[i] * nextLayerGrads[i];
 		}
-		return m_dW;
-	}
-
-	void Update(const dmOptimizer::dmOptimizerGradientDescent& opt)
-	{
-		opt.Update(m_derivatives, m_weights);
 	}
 
 	const std::vector<double>& Output() const
@@ -65,9 +45,33 @@ public:
 	{
 		return m_dW;
 	}
+
+	void CalcGrads(const std::vector<double>& input,
+		const std::vector<double>& nextDeriv)
+	{
+		for (size_t i = 0; i < nextDeriv.size(); ++i)
+		{
+			m_grads[i] = input[i] * nextDeriv[i];
+		}
+	}
+	dmLayerType GetType() const
+	{
+		return this->m_type;
+	}
+
+	size_t DataCapasity() const
+	{
+		return m_outputSize;
+	}
+
+	void MapData(double* wSpace, double* gSpace, const size_t size)
+	{
+		m_weights.set_view(wSpace, size);
+		m_grads.set_view(gSpace, size);
+	}
 private:
-	std::vector<double> m_weights;
-	std::vector<dmOptimizer::dmGrad> m_derivatives;
+	dmVectorView<double> m_weights;
+	dmVectorView<double> m_grads;
 	std::vector<double> m_dW;
 	std::vector<double> m_z;
 };

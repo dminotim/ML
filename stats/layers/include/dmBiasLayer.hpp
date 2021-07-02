@@ -3,6 +3,7 @@
 #include "dmLayer.hpp"
 #include <functional>
 #include <vector>
+#include <sstream>
 
 namespace dmNeural
 {
@@ -11,45 +12,35 @@ class dmBiasLayer : public dmLayer
 {
 public:
 	dmBiasLayer(const size_t size)
-		: dmLayer(size, size),
-		m_weights(size, 1),
+		: dmLayer(size, size, dmLayerType::BIAS),
+		m_weights(nullptr, size),
 		m_z(size, 1),
 		m_dW(size, 1),
-		m_derivatives(size)
+		m_grads(nullptr, size)
 	{
-	}
-	void Init(const std::function<double()>& rnd)
-	{
-		m_weights = std::vector<double>(m_outputSize, 1);
-		for (double& v : m_weights)
-		{
-			v = rnd();
-		}
 	}
 
 	void Forward(const std::vector<double>& input)
 	{
-		// z = in + b
 		for (size_t i = 0; i < input.size(); ++i)
 		{
 			m_z[i] = input[i] + m_weights[i];
 		}
 	}
 
-	std::vector<double> Backprop(const std::vector<double>& /*input*/,
+	void Backprop(const std::vector<double>& /*input*/,
 		const std::vector<double>& nextLayerGrads)
 	{
 		m_dW = nextLayerGrads;
-		for (size_t i = 0; i < m_dW.size(); ++i)
-		{
-			m_derivatives[i].m_grad = m_dW[i];
-		}
-		return m_dW;
 	}
 
-	void Update(const dmOptimizer::dmOptimizerGradientDescent& opt)
+	void CalcGrads(const std::vector<double>& input,
+		const std::vector<double>& nextDeriv)
 	{
-		opt.Update(m_derivatives, m_weights);
+		for (size_t i = 0; i < m_dW.size(); ++i)
+		{
+			m_grads[i] = m_dW[i];
+		}
 	}
 
 	const std::vector<double>& Output() const
@@ -61,12 +52,28 @@ public:
 	{
 		return m_dW;
 	}
-private:
-	std::vector<double> m_weights;
-	std::vector<double> m_dW;
-	std::vector <dmOptimizer::dmGrad> m_derivatives;
-	std::vector<double> m_z;
 
+	dmLayerType GetType() const
+	{
+		return this->m_type;
+	}
+
+	size_t DataCapasity() const
+	{
+		return m_outputSize;
+	}
+
+	void MapData(double* wSpace, double* gSpace, const size_t size)
+	{
+		m_weights.set_view(wSpace, size);
+		m_grads.set_view(gSpace, size);
+	}
+
+private:
+	dmVectorView<double> m_weights;
+	dmVectorView<double> m_grads;
+	std::vector<double> m_dW;
+	std::vector<double> m_z;
 };
 
 } // namespace dmNeural

@@ -5,11 +5,23 @@
 
 namespace dmNeural
 {
+
+enum class dmLayerType
+{
+	FULLY_CONNECTED,
+	RE_LU,
+	BIAS,
+	LINEAR_MULT,
+	OUTPUT,
+	TANH,
+	UNKNOWN
+};
+
 class dmLayer
 {
 public:
-	dmLayer(const size_t sizeIn, const size_t sizeOut)
-		:m_inputSize(sizeIn), m_outputSize(sizeOut)
+	dmLayer(const size_t sizeIn, const size_t sizeOut, const dmLayerType& type)
+		:m_inputSize(sizeIn), m_outputSize(sizeOut), m_type(type)
 	{
 	}
 	size_t GetInSize() const
@@ -22,20 +34,23 @@ public:
 		return m_outputSize;
 	}
 
-	virtual void Init(const std::function<double()>& rnd) = 0;
-	virtual void Forward(const std::vector<double>& prevLayerWeights) = 0;
+	virtual dmLayerType GetType() const = 0;
+	virtual size_t DataCapasity() const = 0;
+	virtual void MapData(double* wSpace, double* gSpace, const size_t size) = 0;
+	virtual void Forward(const std::vector<double>& input) = 0;
+	virtual void CalcGrads(const std::vector<double>& input,
+		const std::vector<double>& nextDeriv) = 0;
 	virtual void SetOut(const std::vector<double>& /*output*/)
 	{
 	};
-	virtual std::vector<double> Backprop(const std::vector<double>& input,
+	virtual void Backprop(const std::vector<double>& input,
 		const std::vector<double>& nextLayerGrads) = 0;
 	virtual const std::vector<double>& Output() const = 0;
 	virtual const std::vector<double>& GetDerivatives() const = 0;
-
-	virtual void Update(const dmOptimizer::dmOptimizerGradientDescent& opt) = 0;
 protected:
-	const size_t m_inputSize;
-	const size_t m_outputSize;
+	size_t m_inputSize;
+	size_t m_outputSize;
+	const dmLayerType m_type;
 };
 
 } // namespace dmNeural

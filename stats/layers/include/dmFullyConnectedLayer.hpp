@@ -11,45 +11,42 @@ class dmFullyConnectedLayer : public dmLayer
 {
 public:
 	dmFullyConnectedLayer(const size_t sizeIn, const size_t sizeOut)
-		: dmLayer(sizeIn, sizeOut),
-		m_weights(m_outputSize, m_inputSize),
-		m_derivatives(m_outputSize* m_inputSize)
+		: dmLayer(sizeIn, sizeOut, dmLayerType::FULLY_CONNECTED),
+		m_weights(nullptr, m_outputSize, m_inputSize),
+		m_grads(nullptr, m_outputSize* m_inputSize),
+		m_dW(m_inputSize),
+		m_z(m_outputSize)
 	{
-	}
-	void Init(const std::function<double()>& rnd)
-	{
-		m_weights = dmMatrix<double>(m_outputSize, m_inputSize);
-		m_dW = std::vector<double>(m_inputSize, 0);
-		m_derivatives = std::vector<dmOptimizer::dmGrad>(m_outputSize * m_inputSize);
-		for (double& v : m_weights.m_values)
-		{
-			v = rnd();
-		}
 	}
 
 	void Forward(const std::vector<double>& input)
 	{
-		m_z = (m_weights * input);
+		m_weights.MultiplyInPlace(input, m_z);
 	}
 
-	std::vector<double> Backprop(const std::vector<double>& input,
+	void Backprop(const std::vector<double>& input,
 		const std::vector<double>& nextLayerGrads)
 	{
-		m_dW.assign(m_dW.size(), 0.);
+		for (size_t i = 0; i < m_inputSize; ++i)
+		{
+			m_dW[i] = 0;
+			for (size_t j = 0; j < m_outputSize; ++j)
+			{
+				m_dW[i] += m_weights(j, i) * nextLayerGrads[j];
+			}
+		}
+	}
+
+	void CalcGrads(const std::vector<double>& input,
+		const std::vector<double>& nextDeriv)
+	{
 		for (size_t i = 0; i < m_inputSize; ++i)
 		{
 			for (size_t j = 0; j < m_outputSize; ++j)
 			{
-				m_derivatives[j * m_inputSize + i].m_grad = input[i] * nextLayerGrads[j];
-				m_dW[i] += m_weights(j, i) * nextLayerGrads[j];
+				m_grads[j * m_inputSize + i] = input[i] * nextDeriv[j];
 			}
 		}
-		return m_dW;
-	}
-
-	void Update(const dmOptimizer::dmOptimizerGradientDescent& opt)
-	{
-		opt.Update(m_derivatives, m_weights.m_values);
 	}
 
 	const std::vector<double>& Output() const
@@ -62,11 +59,27 @@ public:
 		return m_dW;
 	}
 
+	dmLayerType GetType() const
+	{
+		return this->m_type;
+	}
+
+	size_t DataCapasity() const
+	{
+		return m_outputSize * m_inputSize;
+	}
+
+	void MapData(double* wSpace, double* gSpace, const size_t size)
+	{
+		m_weights.set_view(wSpace, m_outputSize, m_inputSize);
+		m_grads.set_view(gSpace, size);
+	}
+	
 private:
-	dmMatrix<double> m_weights;
-	std::vector<double> m_dW;
-	std::vector<dmOptimizer::dmGrad> m_derivatives;
+	dmBlock<double> m_weights;
+	dmVectorView<double> m_grads;
 	std::vector<double> m_z;
+	std::vector<double> m_dW;
 };
 
 } // namespace dmNeural

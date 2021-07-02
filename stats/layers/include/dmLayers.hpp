@@ -5,3 +5,4 @@
 #include "dmLinearMultLayer.hpp"
 #include "dmOutputLayer.hpp"
 #include "dmReLULayer.hpp"
+#include "dmHyperbolicTan.hpp"

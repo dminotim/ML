@@ -8,6 +8,10 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 file(GLOB ML_FILES_FOUND
     math/include/*.hpp
     math/src/*.cpp
+	IO/include/*.hpp
+    IO/src/*.cpp
+	stats/include/*.hpp
+    stats/layers/include/*.hpp
 	ML.cpp
     StdAfx.h)
 	
@@ -17,7 +21,10 @@ target_include_directories(ML
     PRIVATE
         .
     PUBLIC
-		${CMAKE_CURRENT_SOURCE_DIR}/math/include)
+		${CMAKE_CURRENT_SOURCE_DIR}/math/include
+		${CMAKE_CURRENT_SOURCE_DIR}/IO/include
+		${CMAKE_CURRENT_SOURCE_DIR}/stats/include
+		${CMAKE_CURRENT_SOURCE_DIR}/stats/layers/include)
 
 foreach(_source ${ML_FILES_FOUND})
 	if (IS_ABSOLUTE "${_source}")
