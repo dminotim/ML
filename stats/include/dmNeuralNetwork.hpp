@@ -9,6 +9,8 @@
 #include "dmLayer.hpp"
 #include "dmLayers.hpp"
 #include <fstream>
+#include "dmDataCollector.hpp"
+#include <iomanip>
 
 namespace dmNeural
 {
@@ -18,9 +20,9 @@ struct dmInOut
 	std::vector<double> m_out;
 };
 
-
+typedef dmDataCollector DataCol;
 std::unique_ptr<dmLayer> GetLayerByType(const dmLayerType& type, const size_t inS, 
-	const size_t outS)
+	const size_t outS, const size_t kernelSize)
 {
 	switch (type)
 	{
@@ -30,6 +32,7 @@ std::unique_ptr<dmLayer> GetLayerByType(const dmLayerType& type, const size_t in
 	case dmLayerType::OUTPUT: return std::unique_ptr<dmLayer>(new dmOutputLayer(inS, {0.}));
 	case dmLayerType::RE_LU: return std::unique_ptr<dmLayer>(new dmReLULayer(inS));
 	case dmLayerType::TANH: return std::unique_ptr<dmLayer>(new dmHyperbolicTan(inS));
+	case dmLayerType::CONVOLUTION: return std::unique_ptr<dmLayer>(new dmConvolutionalLayer(inS, outS, kernelSize));
 	default:
 		return nullptr;
 	}
@@ -42,6 +45,7 @@ public:
 		:m_randomGen(randomGen), m_opt(0.000001, 0.6, 0.001, 1), m_isFinalized(false)
 	{
 	}
+
 	void AddLayer(std::unique_ptr<dmLayer>&& l)
 	{
 		m_isFinalized = false;
@@ -76,49 +80,21 @@ public:
 	{
 		if (!m_isFinalized)
 			throw std::exception("should be finalized");
-		for (int i = 0; i < m_layers.size(); i++)
-		{
-			if (i == 0)
-				m_layers[i]->Forward(singleCase.m_in);
-			else
-				m_layers[i]->Forward(m_layers[i - 1]->Output());
-		}
-		m_layers.back()->SetOut(singleCase.m_out);
-		std::vector<double> temp;
-		for (int i = m_layers.size() - 1; i >= 0; i--)
-		{
-			if (i == 0)
-			{
-				m_layers[i]->Backprop(singleCase.m_in, m_layers[i + 1]->GetDerivatives());
-				m_layers[i]->CalcGrads(singleCase.m_in, m_layers[i + 1]->GetDerivatives());
-				continue;
-			}
-			if (i == m_layers.size() - 1)
-			{
-				m_layers[i]->Backprop(
-					m_layers[i - 1]->Output(), temp);
-				m_layers[i]->CalcGrads(
-					m_layers[i - 1]->Output(), temp);
-			}
-			else
-			{
-				m_layers[i]->Backprop(
-					m_layers[i - 1]->Output(), m_layers[i + 1]->GetDerivatives());
-				m_layers[i]->CalcGrads(
-					m_layers[i - 1]->Output(), m_layers[i + 1]->GetDerivatives());
-			}
-		}
+		CalcCost(singleCase.m_in);
+		BackProp(singleCase);
+		CalcGrads(singleCase);
 		return m_gradsSpace;
 	}
+
 	double CostGradNumeric(dmInOut singleCase, size_t idx, double h)
 	{
 		if (!m_isFinalized)
 			throw std::exception("should be finalized");
 		double saved = m_weightsSpace[idx];
 		m_weightsSpace[idx] = saved + h;
-		double costFwd = this->Guess(singleCase.m_in)[0];
+		double costFwd = this->CalcCost(singleCase.m_in)[0];
 		m_weightsSpace[idx] = saved - h;
-		double costBck = this->Guess(singleCase.m_in)[0];
+		double costBck = this->CalcCost(singleCase.m_in)[0];
 		m_weightsSpace[idx] = saved;
 		return (costFwd - costBck) / h / 2;
 	}
@@ -134,57 +110,45 @@ public:
 		return gradNum;
 	}
 
-	// end not included
-	double TrainBatch(const std::vector<dmInOut>& cases,
-		const size_t start, const size_t end)
+	void BackProp(const dmInOut& item)
+	{
+		this->CalcCost(item.m_in);
+		m_layers.back()->SetOut(item.m_out);
+		m_layers.back()->Backprop((*std::prev(m_layers.end(), 2))->Output(),
+			m_layers.back()->GetDerivatives());
+		for (int i = m_layers.size() - 2; i >= 1; i--)
+		{
+			m_layers[i]->Backprop(
+				m_layers[i - 1]->Output(), m_layers[i + 1]->GetDerivatives());
+		}
+	}
+
+	void CalcGrads(const dmInOut& item)
+	{
+		m_layers.back()->CalcGrads((*std::prev(m_layers.end(),2))->Output(),
+			m_layers.back()->GetDerivatives());
+		for (int i = m_layers.size() - 2; i >= 1; i--)
+		{
+			m_layers[i]->CalcGrads(
+				m_layers[i - 1]->Output(), m_layers[i + 1]->GetDerivatives());
+		}
+		m_layers[0]->CalcGrads(item.m_in, m_layers[1]->GetDerivatives());
+	}
+
+	void TrainBatch(const std::vector<dmInOut>& cases,
+		const size_t start, const size_t end, DataCol& collector)
 	{
 		if (!m_isFinalized)
 			throw std::exception("should be finalized");
 		std::vector<double> gradSum(m_weightsSpace.size(), 0);
 		for (size_t c = start; c < end; ++c)
 		{
-			this->Guess(cases[c].m_in);
-
-			m_layers.back()->SetOut(cases[c].m_out);
-			std::vector<double> temp;
-			for (int i = m_layers.size() - 1; i >= 0; i--)
-			{
-				if (i == 0)
-				{
-					m_layers[i]->Backprop(cases[c].m_in, m_layers[i + 1]->GetDerivatives());
-					continue;
-				}
-				if (i == m_layers.size() - 1)
-				{
-					m_layers[i]->Backprop(
-						m_layers[i - 1]->Output(), temp);
-				}
-				else {
-					m_layers[i]->Backprop(
-						m_layers[i - 1]->Output(), m_layers[i + 1]->GetDerivatives());
-				}
-			}
-			for (int i = m_layers.size() - 1; i >= 0; i--)
-			{
-				if (i == 0)
-				{
-					m_layers[i]->CalcGrads(cases[c].m_in, m_layers[i + 1]->GetDerivatives());
-					continue;
-				}
-				if (i == m_layers.size() - 1)
-				{
-					m_layers[i]->CalcGrads(
-						m_layers[i - 1]->Output(), temp);
-				}
-				else {
-					m_layers[i]->CalcGrads(
-						m_layers[i - 1]->Output(), m_layers[i + 1]->GetDerivatives());
-				}
-			}
+			BackProp(cases[c]);
+			CalcGrads(cases[c]);
 			for (size_t i = 0; i < m_gradsSpace.size(); ++i)
 			{
 				gradSum[i] += m_gradsSpace[i];
-			}
+			}			
 		}
 		const size_t bSize = (end - start);
 		for (size_t i = 0; i < gradSum.size(); ++i)
@@ -192,49 +156,53 @@ public:
 			gradSum[i] /= double(bSize);
 		}
 		m_opt.Update(gradSum, m_weightsSpace);
-		double err = 0;
-		return err;
 	}
 
-	double Train(const size_t epochCount, const size_t batchSize, const std::vector<dmInOut>& cases)
+	double CalcError(const dmInOut& item)
+	{
+		const std::vector<double>& vals = this->Predict(item.m_in);
+		double res = 0;
+		for (size_t i = 0; i < vals.size(); ++i)
+		{
+			res += (item.m_out[i] - vals[i]) * (item.m_out[i] - -vals[i]);
+		}
+		return res;
+	}
+
+	double CalcError(const std::vector<dmInOut>& items)
+	{
+		double err = 0;
+		for (auto& it : items)
+		{
+			err += CalcError(it);
+		}
+		return err / double(items.size());
+	}
+
+	double Train(const size_t epochCount, const size_t batchSize, const std::vector<dmInOut>& cases,
+		DataCol& collector)
 	{
 		if (!m_isFinalized)
 			throw std::exception("should be finalized");
-	
-		int index = 0;
-
-
-		for (long ep = 0; ep < epochCount; ++ep)
+		for (size_t ep = 0; ep < epochCount; ++ep)
 		{
-			size_t start = 0;
-			size_t end = cases.size();
-			
-			while (start < end)
+			for (size_t start = 0, end = cases.size(), next =0;
+				start < end; start = next)
 			{
-				const size_t next = std::min(start + batchSize, end);
-				TrainBatch(cases, start, next);
-				start = next;
+				next = std::min(start + batchSize, end);
+				TrainBatch(cases, start, next, collector);
 			}
 			
-			if (ep % 1000 == 0)
-			{
-				double amse = 0;
-				for (auto& c : cases)
-				{
-					int idx = 0;
-					for (double v : this->Predict(c.m_in))
-					{
-						amse += std::abs(c.m_out[idx] - v);
-						idx++;
-					}
-				}
-				std::cout << "case " << ep << " err=" << amse / double(cases.size()) << std::endl;
-			}
+			if (ep % 1000 != 0)
+				continue;
+			const double err = CalcError(cases);
+			collector.Collect(err);
+			std::cout << "case " << ep << " err=" << err << std::endl;
 		}
 		return 0;
 	}
 
-	std::vector<double> Guess(const std::vector<double>& in)
+	std::vector<double> CalcCost(const std::vector<double>& in)
 	{
 		if (!m_isFinalized)
 			throw std::exception("should be finalized");
@@ -276,7 +244,18 @@ public:
 		for (auto& l : m_layers)
 		{
 			ss << int(l->GetType()) << std::endl;
-			ss << l->GetInSize() << spliter<< l->GetOutSize() << std::endl;
+			
+			if (l->GetType() == dmLayerType::CONVOLUTION)
+			{
+				dmConvolutionalLayer* conv = dynamic_cast<dmConvolutionalLayer*>(l.get());
+				ss << conv->GetImageW() << spliter << conv->GetImageH()
+					<< spliter<< conv->GetKernelSize();
+			}
+			else
+			{
+				ss << l->GetInSize() << spliter << l->GetOutSize();
+			}
+			ss << std::endl;
 		}
 		ss << m_weightsSpace.size() << std::endl;
 		for (size_t i = 0; i < m_weightsSpace.size(); ++i)
@@ -295,6 +274,7 @@ public:
 		{
 			return false;
 		}
+		ofs << std::fixed << std::setprecision(9);
 		ofs << Serialize();
 		return true;
 	}
@@ -326,9 +306,13 @@ public:
 			lType >> lTypeInt;
 			std::getline(ifs, line);
 			std::stringstream lSyze(line);
-			size_t inS, outS;
+			size_t inS, outS, kernel = 0;
 			lSyze >> inS >> outS;
-			this->AddLayer(GetLayerByType(dmLayerType(lTypeInt), inS, outS));
+			if (dmLayerType(lTypeInt) == dmLayerType::CONVOLUTION)
+			{
+				lSyze >> kernel;
+			}
+			this->AddLayer(GetLayerByType(dmLayerType(lTypeInt), inS, outS, kernel));
 		}
 		Finalize();
 		std::getline(ifs, line);

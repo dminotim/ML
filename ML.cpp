@@ -71,11 +71,15 @@ int main()
 	std::default_random_engine e1(3731);
 	std::uniform_real_distribution<double> uniform_dist(0.0, 0.1);
 	std::function<double()> rnd = [&]() { return uniform_dist(e1); };
+
+	std::default_random_engine e2(1);
+	std::uniform_real_distribution<double> uniform_dist2(-0.0001, 0.0001);
+	std::function<double()> rnd2 = [&]() { return uniform_dist2(e2); };
 	std::vector<std::vector<double>> xVals;
 	
-	for (size_t i = 0; i < 100; ++i)
+	for (size_t i = 0; i < 50; ++i)
 	{
-		xVals.push_back({ rnd() * 10., rnd() * 10.,  rnd() * 10. });
+		xVals.push_back({ rnd() * 10, rnd() * 10,  rnd() * 10 });
 	}
 	std::vector<double> yVals;
 	std::vector<dmNeural::dmInOut> cases;
@@ -88,28 +92,40 @@ int main()
 		cases.push_back(toAdd);
 	}
 
-	dmNeural::dmNeuralNetwork net(rnd);
-	net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmFullyConnectedLayer(3, 20)));
-	net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmBiasLayer(20)));
-	net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmHyperbolicTan(20)));
-	net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmFullyConnectedLayer(20, 1)));
-	net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmBiasLayer(1)));
-	net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmHyperbolicTan(1)));
-	net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmOutputLayer(1, { 0. })));
-	//net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmBiasLayer(10)));
-	//net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmReLULayer(10)));
-	//net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmFullyConnectedLayer(10, 1.)));
+	dmNeural::dmNeuralNetwork net(rnd2);
+	//net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmFullyConnectedLayer(3, 16)));
+	//net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmBiasLayer(16)));
+	//net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmReLULayer(16)));
+	//net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmConvolutionalLayer(4, 4, 3)));
+	//net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmFullyConnectedLayer(4, 1)));
 	//net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmBiasLayer(1)));
 	//net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmReLULayer(1)));
-
 	//net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmOutputLayer(1, { 0. })));
-	net.Finalize();
-	net.Train(50000, 1, cases);
+	////net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmBiasLayer(10)));
+	////net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmReLULayer(10)));
+	////net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmFullyConnectedLayer(10, 1.)));
+	////net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmBiasLayer(1)));
+	////net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmReLULayer(1)));
+
+	////net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmOutputLayer(1, { 0. })));
+	//net.Finalize();
+	//dmNeural::DataCol col;
+	//net.Train(500000, 5, cases, col);
+	//std::ofstream ofs("C:\\projects\\MyML\\learning_curve.txt");
+	//for (size_t i = 0; i < col.m_x.size(); ++i)
+	//{
+	//	ofs << col.m_x[i] << " ";
+	//}
+	//ofs << std::endl;
+	//for (size_t i = 0; i < col.m_x.size(); ++i)
+	//{
+	//	ofs << col.m_y[i] << " ";
+	//}
+	//ofs.close();
 	//net.SaveModel("C:\\projects\\TEST\\model.txt");
-	//net.LoadModel("C:\\projects\\TEST\\model.txt");
+	net.LoadModel("C:\\projects\\TEST\\model.txt");
 	std::cout << std::endl;
 	std::cout << std::fixed << std::setprecision(9);
-	/*std::vector<double> sumReal();*/
 	for (size_t i = 0; i < 1; ++i)
 	{
 		std::cout << std::endl;
@@ -128,23 +144,6 @@ int main()
 		std::cout << std::endl;
 	}
 	std::cout << std::endl;
-	/*for (size_t i = 0; i < 100; ++i)
-	{
-		const double val1 = rnd() * 10;
-		const double val2 = rnd() * 10;
-		std::cout << net.Guess({ val1, val2 })[0] << " : " << val1 * val1 + val2 * val2 << std::endl;
-	}*/
-	//net.Train()
-	//for (auto& m : samples)
-	//{
-	//	std::cout << "###### " << dmStatsCore::GetMean(m) <<  "\n";
-	//	/*for (auto v : m.m_values)
-	//	{
-	//		std::cout << v << " ";
-	//	}*/
-	//	std::cout << std::endl;
-	//}
-	std::cout << "Hello World!\n";
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

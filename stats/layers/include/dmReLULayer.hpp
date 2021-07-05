@@ -17,12 +17,8 @@ public:
 	{
 		for (size_t i = 0; i < input.size(); ++i)
 		{
-			double v = input[i];
-			if (v < 0)
-			{
-				v = 0;
-			}
-			m_z[i] = v;
+			m_z[i] = ((input[i] < 0)  ? 0.01: 1.) * input[i];
+
 		}
 	}
 
@@ -31,7 +27,7 @@ public:
 	{
 		for (size_t i = 0; i < nextLayerGrads.size(); ++i)
 		{
-			m_dW[i] = (input[i] < 0) ? (0) : (1. * nextLayerGrads[i]);
+			m_dW[i] = ((input[i] < 0) ? 0.01 : 1.) * nextLayerGrads[i];
 		}
 	}
 

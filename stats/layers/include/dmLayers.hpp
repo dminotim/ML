@@ -6,3 +6,4 @@
 #include "dmOutputLayer.hpp"
 #include "dmReLULayer.hpp"
 #include "dmHyperbolicTan.hpp"
+#include "dmConvolutionalLayer.hpp"
