@@ -11,11 +11,15 @@ file(GLOB ML_FILES_FOUND
 	IO/include/*.hpp
     IO/src/*.cpp
 	stats/include/*.hpp
+	stats/src/*.cpp
+	CNN/include/*.hpp
+	CNN/src/*.cpp
     stats/layers/include/*.hpp
 	ML.cpp
     StdAfx.h)
 	
 add_executable(ML ${ML_FILES_FOUND})
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/lodepng)
 
 target_include_directories(ML
     PRIVATE
@@ -24,8 +28,14 @@ target_include_directories(ML
 		${CMAKE_CURRENT_SOURCE_DIR}/math/include
 		${CMAKE_CURRENT_SOURCE_DIR}/IO/include
 		${CMAKE_CURRENT_SOURCE_DIR}/stats/include
+		${CMAKE_CURRENT_SOURCE_DIR}/CNN/include
+		${CMAKE_CURRENT_SOURCE_DIR}/third_party/lodepng/include
 		${CMAKE_CURRENT_SOURCE_DIR}/stats/layers/include)
-
+		
+target_link_libraries(ML
+    PUBLIC
+        lodepng)
+		
 foreach(_source ${ML_FILES_FOUND})
 	if (IS_ABSOLUTE "${_source}")
 		file(RELATIVE_PATH _source_rel "${CMAKE_CURRENT_SOURCE_DIR}" "${_source}")

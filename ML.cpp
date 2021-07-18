@@ -12,138 +12,117 @@
 #include "dmDataReader.hpp"
 #include "dmStatsCore.hpp"
 #include <memory>
-#include "dmNeuralNetwork.hpp"
-#include "dmLayers.hpp"
 #include <iomanip>
-// check gradient
-//vector<double> grad = cnn->cost_grad(input, target);
-//vector<double> gradNum(grad.size());
-//for (size_t i = 0; i < grad.size(); i++) {
-//	gradNum[i] = cnn->cost_grad_numeric(input, target, i, 1e-8);
-//}
-//double maxDiff = -DBL_MAX;
-//for (size_t i = 0; i < grad.size(); i++) {
-//	maxDiff = (max)(maxDiff, fabs(grad[i] - gradNum[i]));
-//}
+#include "dmRGBImage.hpp"
+#include "dmPainterIO.hpp"
+#include "mwTensor.hpp"
+#include <random>
+#include "mwCNN.hpp"
+#include "mwAdamOptimizer.hpp"
+#include "mwMSELossFunction.hpp"
+#include "mwConv2dLayer.hpp"
+#include "mwReluLayer.hpp"
+#include "mwMaxPoolLayer.hpp"
+#include "mwFCLayer.hpp"
+#include "mwDropOutLayer.hpp"
+#include "mwSoftMax.hpp"
+#include "mwCrossEntropyLossFunction.hpp"
 
-
-
-//double MeshCNN::cost_grad_numeric(const shared_ptr<const MeshFrame>& inp, const shared_ptr<const MeshFrame>& target, size_t idx, double h)
-//{
-//	vector<double> params = serialize();
-//	double saved = params[idx];
-//	params[idx] = saved + h;
-//	deserialize(params);
-//	double costFwd = cost(inp, target);
-//	params[idx] = saved - h;
-//	deserialize(params);
-//	double costBck = cost(inp, target);
-//	params[idx] = saved;
-//	deserialize(params);
-//	return (costFwd - costBck) / h / 2;
-//}
-
-//layers.back()->delta = lastDelta;
-//for (auto it = std::prev(layers.end()); it != layers.begin(); --it) {
-//	(**it).backprop(**std::prev(it));
-//}
-//shared_ptr<const MeshFrame> prevFrame = inp;
-//for (shared_ptr<Layer> layerPtr : layers) {
-//	ComputeGradientsVisitor computeGradients(*prevFrame);
-//	layerPtr->accept(computeGradients);
-//	prevFrame = layerPtr->out;
-//}
 
 int main()
 {
-	/*auto samples = dmReader::Read("C:\\projects\\data.txt");
-	auto covariance = dmStatsCore::GetCorrelationMatrix(samples);
-	auto r2 = dmStatsCore::GetR2Matrix(samples);
-	std::cout << std::endl;
-	covariance.Print();
-	std::cout << std::endl;
-	std::cout << std::endl;
-	r2.Print();*/
-	
-	std::random_device r;
+	mwCNN<float> cnn;
+	std::shared_ptr<mwOptimizer<float>> optimizer = std::make_shared<mwAdamOptimizer<float>>();
 
-	// Choose a random mean between 1 and 6
-	std::default_random_engine e1(3731);
-	std::uniform_real_distribution<double> uniform_dist(0.0, 0.1);
-	std::function<double()> rnd = [&]() { return uniform_dist(e1); };
+	std::shared_ptr<mwLossFunction<float>> lossMse = std::make_shared<mwCrossEntropyLossFunction<float>>();
 
-	std::default_random_engine e2(1);
-	std::uniform_real_distribution<double> uniform_dist2(-0.0001, 0.0001);
-	std::function<double()> rnd2 = [&]() { return uniform_dist2(e2); };
-	std::vector<std::vector<double>> xVals;
-	
-	for (size_t i = 0; i < 50; ++i)
 	{
-		xVals.push_back({ rnd() * 10, rnd() * 10,  rnd() * 10 });
+
+		auto mnist = dmReader::DownloadMNIST<float>("C:\\projects\\MyML\\mnist_png\\training\\");
+		unsigned seed = 234324;
+
+		std::shuffle(mnist.begin(), mnist.end(), std::default_random_engine(seed));
+		std::vector<mwTensor<float>> tesvecX;
+		std::vector<mwTensor<float>> tesvecY;
+		std::vector<mwTensorView<float>> tesvecVX;
+		std::vector<mwTensorView<float>> tesvecVY;
+		dmReader::ConvertMNISTToTensors(mnist, tesvecX, tesvecY);
+		dmReader::ConvertToTensorView(tesvecX, tesvecY, tesvecVX, tesvecVY);
+
+
+
+		auto conv1 = std::make_shared<layers::mwConv2dLayer<float>>(16, 3, tesvecVX.back());
+		cnn.AddLayer(conv1);
+		cnn.AddLayer(std::make_shared<layers::mwReluLayer<float>>(conv1->GetOutShape()));
+		std::cout << "Prams size " << conv1->OptimizedParamsCount()
+			<< " shape " << conv1->GetOutShape().RowCount() << " "
+			<< conv1->GetOutShape().ColCount() << " "
+			<< conv1->GetOutShape().Depth() << std::endl;
+		auto maxp = std::make_shared<layers::mwMaxPoolLayer<float>>(2, conv1->GetOutShape());
+		cnn.AddLayer(maxp);
+		auto conv2 = std::make_shared<layers::mwConv2dLayer<float>>(32, 3, maxp->GetOutShape());
+		cnn.AddLayer(conv2);
+
+		std::cout << "Prams size " << conv2->OptimizedParamsCount()
+			<< " shape " << conv2->GetOutShape().RowCount() << " "
+			<< conv2->GetOutShape().ColCount() << " "
+			<< conv2->GetOutShape().Depth() << std::endl;
+
+		auto maxp2 = std::make_shared<layers::mwMaxPoolLayer<float>>(2, conv2->GetOutShape());
+		cnn.AddLayer(maxp2);
+		std::cout << "Prams size " << maxp2->OptimizedParamsCount()
+			<< " shape " << maxp2->GetOutShape().RowCount() << " "
+			<< maxp2->GetOutShape().ColCount() << " "
+			<< maxp2->GetOutShape().Depth() << std::endl;
+
+		cnn.AddLayer(std::make_shared<layers::mwReluLayer<float>>(maxp2->GetOutShape()));
+
+		cnn.AddLayer(std::make_shared<layers::mwDropOutLayer<float>>(maxp2->GetOutShape()));
+
+		//auto fcLayer1 =
+		//	std::make_shared<layers::mwFCLayer<float>>(10, maxp2->GetOutShape());
+		//cnn.AddLayer(fcLayer1);
+		auto fcLayer2 = std::make_shared<layers::mwFCLayer<float>>(10, maxp2->GetOutShape());
+		cnn.AddLayer(fcLayer2);
+
+		std::cout << "Prams size " << fcLayer2->OptimizedParamsCount()
+			<< " shape " << fcLayer2->GetOutShape().RowCount() << " "
+			<< fcLayer2->GetOutShape().ColCount() << " "
+			<< fcLayer2->GetOutShape().Depth() << std::endl;
+		cnn.AddLayer(std::make_shared<layers::mwSoftMax<float>>(fcLayer2->GetOutShape()));
+		//auto fcLayer3= std::make_shared<layers::mwFCLayer<double>>(1, fcLayer2->GetOutShape());
+		//cnn.AddLayer(fcLayer3);
+		//cnn.AddLayer(std::make_shared<layers::mwReluLayer<double>>(fcLayer3->GetOutShape()));
+		cnn.Finalize();
+		std::cout << "Fit" << std::endl;
+		cnn.Fit(tesvecVX, tesvecVY, optimizer, lossMse, 5, 1);
+		std::cout << "Fit 2" << std::endl;
 	}
-	std::vector<double> yVals;
-	std::vector<dmNeural::dmInOut> cases;
-	for (size_t i = 0; i < xVals.size(); ++i)
-	{
-		yVals.push_back(xVals[i][0] * xVals[i][0] + xVals[i][1] * xVals[i][1] + xVals[i][2]);
-		dmNeural::dmInOut toAdd;
-		toAdd.m_in = xVals[i];
-		toAdd.m_out = std::vector<double>(1, yVals[i]);
-		cases.push_back(toAdd);
-	}
+	auto mnist = dmReader::DownloadMNIST<float>("C:\\projects\\MyML\\mnist_png\\testing\\");
+	unsigned seed = 234324;
 
-	dmNeural::dmNeuralNetwork net(rnd2);
-	//net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmFullyConnectedLayer(3, 16)));
-	//net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmBiasLayer(16)));
-	//net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmReLULayer(16)));
-	//net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmConvolutionalLayer(4, 4, 3)));
-	//net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmFullyConnectedLayer(4, 1)));
-	//net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmBiasLayer(1)));
-	//net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmReLULayer(1)));
-	//net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmOutputLayer(1, { 0. })));
-	////net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmBiasLayer(10)));
-	////net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmReLULayer(10)));
-	////net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmFullyConnectedLayer(10, 1.)));
-	////net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmBiasLayer(1)));
-	////net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmReLULayer(1)));
+	std::shuffle(mnist.begin(), mnist.end(), std::default_random_engine(seed));
+	std::vector<mwTensor<float>> tesvecX;
+	std::vector<mwTensor<float>> tesvecY;
+	std::vector<mwTensorView<float>> tesvecVX;
+	std::vector<mwTensorView<float>> tesvecVY;
+	dmReader::ConvertMNISTToTensors(mnist, tesvecX, tesvecY);
+	dmReader::ConvertToTensorView(tesvecX, tesvecY, tesvecVX, tesvecVY);
 
-	////net.AddLayer(std::unique_ptr<dmNeural::dmLayer>(new dmNeural::dmOutputLayer(1, { 0. })));
-	//net.Finalize();
-	//dmNeural::DataCol col;
-	//net.Train(500000, 5, cases, col);
-	//std::ofstream ofs("C:\\projects\\MyML\\learning_curve.txt");
-	//for (size_t i = 0; i < col.m_x.size(); ++i)
-	//{
-	//	ofs << col.m_x[i] << " ";
-	//}
-	//ofs << std::endl;
-	//for (size_t i = 0; i < col.m_x.size(); ++i)
-	//{
-	//	ofs << col.m_y[i] << " ";
-	//}
-	//ofs.close();
-	//net.SaveModel("C:\\projects\\TEST\\model.txt");
-	net.LoadModel("C:\\projects\\TEST\\model.txt");
-	std::cout << std::endl;
-	std::cout << std::fixed << std::setprecision(9);
-	for (size_t i = 0; i < 1; ++i)
+	int goodCount = 0;
+	for (int i = 0; i < tesvecVX.size(); ++i)
 	{
-		std::cout << std::endl;
-		std::cout << "In: " << cases[i].m_in[0] << ", " << cases[i].m_in[1]
-			<< " Out: " << cases[i].m_out[0] << std::endl;
-		std::cout << "Ans " << net.Predict(cases[i].m_in)[0] << std::endl;
-		for (const double v : net.CostGrad(cases[i]))
+		auto pred = cnn.Predict(tesvecVX[i]);
+		size_t idx1 = dmReader::GetMaxIndex(pred);
+		size_t idx2 = dmReader::GetMaxIndex(tesvecVY[i]);
+
+		if (idx1 == idx2)
 		{
-			std::cout << v << " ";
+			goodCount++;
 		}
-		std::cout << std::endl;
-		for (const double v : net.CostGradNumeric(cases[i]))
-		{
-			std::cout << v << " ";
-		}
-		std::cout << std::endl;
 	}
-	std::cout << std::endl;
+
+	std::cout << "accuracy = " << double(goodCount) / double(tesvecVX.size()) << std::endl;
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
