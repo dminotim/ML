@@ -27,10 +27,57 @@
 #include "mwDropOutLayer.hpp"
 #include "mwSoftMax.hpp"
 #include "mwCrossEntropyLossFunction.hpp"
+#include "dmBinaryStream.hpp"
+#include "mwZeroPaddingLayer.hpp"
+#include "mwUpsamplingLayer.hpp"
+#include "mwConcatLayer.hpp"
+#include "mwSigmoid.hpp"
 
+std::shared_ptr<layers::mwLayer<float>> AddConvolution(mwCNN<float>& cnn, const size_t fc,
+	const mwTensorView<float>& inShape)
+{
+	auto zeroP = std::make_shared<layers::mwZeroPaddingLayer<float>>(1, inShape);
+	cnn.AddLayer(zeroP);
+	auto convolv = std::make_shared<layers::mwConv2dLayer<float>>(fc, 3, zeroP->GetOutShape());
+	cnn.AddLayer(convolv);
+	auto relu = std::make_shared<layers::mwReluLayer<float>>(convolv->GetOutShape());
+	cnn.AddLayer(relu);
+	return convolv;
+}
+
+std::shared_ptr<layers::mwLayer<float>> AddUpsampling(mwCNN<float>& cnn, const size_t fc,
+	const mwTensorView<float>& inShape)
+{
+	auto up1 = std::make_shared<layers::mwUpsamplingLayer<float>>(2, inShape);
+	cnn.AddLayer(up1);
+	auto zeroP = std::make_shared<layers::mwZeroPaddingLayer<float>>(1, up1->GetOutShape());
+	cnn.AddLayer(zeroP);
+	auto convolv = std::make_shared<layers::mwConv2dLayer<float>>(fc, 3, zeroP->GetOutShape());
+	cnn.AddLayer(convolv);
+	auto relu = std::make_shared<layers::mwReluLayer<float>>(convolv->GetOutShape());
+	cnn.AddLayer(relu);
+	return convolv;
+}
+
+std::shared_ptr<layers::mwLayer<float>> AddPooling(
+	mwCNN<float>& cnn,
+	const mwTensorView<float>& inShape)
+{
+	auto maxP = std::make_shared<layers::mwMaxPoolLayer<float>>(2, inShape);
+	cnn.AddLayer(maxP);
+	return maxP;
+}
 
 int main()
 {
+	dmBinOStream out;
+	out << size_t(124);
+	out << size_t(126);
+	dmBinIStream inStr(out.m_values);
+	size_t a;
+	size_t b;
+	inStr >> a >> b;
+	std::cout << std::fixed << std::setprecision(14) <<  a <<" " <<  b << std::endl;
 	mwCNN<float> cnn;
 	std::shared_ptr<mwOptimizer<float>> optimizer = std::make_shared<mwAdamOptimizer<float>>();
 
@@ -38,91 +85,80 @@ int main()
 
 	{
 
-		auto mnist = dmReader::DownloadMNIST<float>("C:\\projects\\MyML\\mnist_png\\training\\");
+		/*auto mnist = dmReader::DownloadMNIST<float>("C:\\projects\\MyML\\mnist_png\\training\\");
 		unsigned seed = 234324;
-
 		std::shuffle(mnist.begin(), mnist.end(), std::default_random_engine(seed));
+		
+		dmReader::ConvertMNISTToTensors(mnist, tesvecX, tesvecY);*/
 		std::vector<mwTensor<float>> tesvecX;
 		std::vector<mwTensor<float>> tesvecY;
-		std::vector<mwTensorView<float>> tesvecVX;
-		std::vector<mwTensorView<float>> tesvecVY;
-		dmReader::ConvertMNISTToTensors(mnist, tesvecX, tesvecY);
-		dmReader::ConvertToTensorView(tesvecX, tesvecY, tesvecVX, tesvecVY);
+		dmReader::DownloadXYImage("C:\\projects\\paint_by_number\\cases2\\input\\",
+			"C:\\projects\\paint_by_number\\cases2\\output\\",
+			tesvecX, tesvecY);
 
+		mwTensorView<float> inputShape(nullptr, 256, 256, 1);
+		auto conv1 = AddConvolution(cnn, 64, inputShape); size_t c1Idx = cnn.Layers().size() - 1;
+		auto pool1 = AddPooling(cnn, conv1->GetOutShape());
+		auto conv2 = AddConvolution(cnn, 128, pool1->GetOutShape()); size_t c2Idx = cnn.Layers().size() - 1;
+		auto pool2 = AddPooling(cnn, conv2->GetOutShape());
+		auto conv3 = AddConvolution(cnn, 256, pool2->GetOutShape()); size_t c3Idx = cnn.Layers().size() - 1;
+		auto pool3 = AddPooling(cnn, conv3->GetOutShape());
+		auto conv4 = AddConvolution(cnn, 512, pool3->GetOutShape()); size_t c4Idx = cnn.Layers().size() - 1;
+		cnn.AddLayer(std::make_shared<layers::mwDropOutLayer<float>>(conv4->GetOutShape())); size_t d4 = cnn.Layers().size() - 1;
+		auto pool4 = AddPooling(cnn, conv4->GetOutShape());
+		auto conv5= AddConvolution(cnn, 1024, pool4->GetOutShape()); size_t c5Idx = cnn.Layers().size() - 1;
+		cnn.AddLayer(std::make_shared<layers::mwDropOutLayer<float>>(conv5->GetOutShape())); size_t d5= cnn.Layers().size() - 1;
+		auto up1 = AddUpsampling(cnn, 512, conv5->GetOutShape());
+		cnn.AddLayer(std::make_shared<layers::mwConcatLayer<float>>(
+			cnn.Layers(), std::vector<size_t>(1, d4), up1->GetOutShape()));
+		auto merge1 = cnn.Layers().back();
+		auto conv6 = AddConvolution(cnn, 512, merge1->GetOutShape());
+		auto up2 = AddUpsampling(cnn, 256, conv6->GetOutShape());
+		cnn.AddLayer(std::make_shared<layers::mwConcatLayer<float>>(
+			cnn.Layers(), std::vector<size_t>(1, c3Idx), up2->GetOutShape()));
+		auto conv7 = AddConvolution(cnn, 256, cnn.Layers().back()->GetOutShape());
+		auto up3 = AddUpsampling(cnn, 128, conv7->GetOutShape());
+		cnn.AddLayer(std::make_shared<layers::mwConcatLayer<float>>(
+			cnn.Layers(), std::vector<size_t>(1, c2Idx), up3->GetOutShape()));
+		auto conv8 = AddConvolution(cnn, 128, cnn.Layers().back()->GetOutShape());
+		auto up4 = AddUpsampling(cnn, 64, conv8->GetOutShape());
+		cnn.AddLayer(std::make_shared<layers::mwConcatLayer<float>>(
+			cnn.Layers(), std::vector<size_t>(1, c1Idx), up4->GetOutShape()));
 
-
-		auto conv1 = std::make_shared<layers::mwConv2dLayer<float>>(16, 3, tesvecVX.back());
-		cnn.AddLayer(conv1);
-		cnn.AddLayer(std::make_shared<layers::mwReluLayer<float>>(conv1->GetOutShape()));
-		std::cout << "Prams size " << conv1->OptimizedParamsCount()
-			<< " shape " << conv1->GetOutShape().RowCount() << " "
-			<< conv1->GetOutShape().ColCount() << " "
-			<< conv1->GetOutShape().Depth() << std::endl;
-		auto maxp = std::make_shared<layers::mwMaxPoolLayer<float>>(2, conv1->GetOutShape());
-		cnn.AddLayer(maxp);
-		auto conv2 = std::make_shared<layers::mwConv2dLayer<float>>(32, 3, maxp->GetOutShape());
-		cnn.AddLayer(conv2);
-
-		std::cout << "Prams size " << conv2->OptimizedParamsCount()
-			<< " shape " << conv2->GetOutShape().RowCount() << " "
-			<< conv2->GetOutShape().ColCount() << " "
-			<< conv2->GetOutShape().Depth() << std::endl;
-
-		auto maxp2 = std::make_shared<layers::mwMaxPoolLayer<float>>(2, conv2->GetOutShape());
-		cnn.AddLayer(maxp2);
-		std::cout << "Prams size " << maxp2->OptimizedParamsCount()
-			<< " shape " << maxp2->GetOutShape().RowCount() << " "
-			<< maxp2->GetOutShape().ColCount() << " "
-			<< maxp2->GetOutShape().Depth() << std::endl;
-
-		cnn.AddLayer(std::make_shared<layers::mwReluLayer<float>>(maxp2->GetOutShape()));
-
-		cnn.AddLayer(std::make_shared<layers::mwDropOutLayer<float>>(maxp2->GetOutShape()));
-
-		//auto fcLayer1 =
-		//	std::make_shared<layers::mwFCLayer<float>>(10, maxp2->GetOutShape());
-		//cnn.AddLayer(fcLayer1);
-		auto fcLayer2 = std::make_shared<layers::mwFCLayer<float>>(10, maxp2->GetOutShape());
-		cnn.AddLayer(fcLayer2);
-
-		std::cout << "Prams size " << fcLayer2->OptimizedParamsCount()
-			<< " shape " << fcLayer2->GetOutShape().RowCount() << " "
-			<< fcLayer2->GetOutShape().ColCount() << " "
-			<< fcLayer2->GetOutShape().Depth() << std::endl;
-		cnn.AddLayer(std::make_shared<layers::mwSoftMax<float>>(fcLayer2->GetOutShape()));
-		//auto fcLayer3= std::make_shared<layers::mwFCLayer<double>>(1, fcLayer2->GetOutShape());
-		//cnn.AddLayer(fcLayer3);
-		//cnn.AddLayer(std::make_shared<layers::mwReluLayer<double>>(fcLayer3->GetOutShape()));
+		auto conv9 = AddConvolution(cnn, 64, cnn.Layers().back()->GetOutShape());
+		auto conv10 = AddConvolution(cnn, 64, cnn.Layers().back()->GetOutShape());
+		auto conv11 = AddConvolution(cnn, 2, cnn.Layers().back()->GetOutShape());
+		auto conv12 = AddConvolution(cnn, 1, cnn.Layers().back()->GetOutShape());
+		cnn.AddLayer(std::make_shared<layers::mwSigmoid<float>>(conv12->GetOutShape()));
 		cnn.Finalize();
+
 		std::cout << "Fit" << std::endl;
-		cnn.Fit(tesvecVX, tesvecVY, optimizer, lossMse, 5, 1);
+		cnn.Fit(tesvecX, tesvecY, optimizer, lossMse, 1, 1);
 		std::cout << "Fit 2" << std::endl;
 	}
+	
 	auto mnist = dmReader::DownloadMNIST<float>("C:\\projects\\MyML\\mnist_png\\testing\\");
 	unsigned seed = 234324;
 
 	std::shuffle(mnist.begin(), mnist.end(), std::default_random_engine(seed));
 	std::vector<mwTensor<float>> tesvecX;
 	std::vector<mwTensor<float>> tesvecY;
-	std::vector<mwTensorView<float>> tesvecVX;
-	std::vector<mwTensorView<float>> tesvecVY;
 	dmReader::ConvertMNISTToTensors(mnist, tesvecX, tesvecY);
-	dmReader::ConvertToTensorView(tesvecX, tesvecY, tesvecVX, tesvecVY);
 
+	cnn.Save("C:\\projects\\MyML\\model.bin");
 	int goodCount = 0;
-	for (int i = 0; i < tesvecVX.size(); ++i)
+	for (int i = 0; i < tesvecX.size(); ++i)
 	{
-		auto pred = cnn.Predict(tesvecVX[i]);
+		auto pred = cnn.Predict(tesvecX[i]);
 		size_t idx1 = dmReader::GetMaxIndex(pred);
-		size_t idx2 = dmReader::GetMaxIndex(tesvecVY[i]);
-
+		size_t idx2 = dmReader::GetMaxIndex(tesvecY[i].ToView());
 		if (idx1 == idx2)
 		{
 			goodCount++;
 		}
 	}
+	std::cout << "accuracy = " << double(goodCount) / double(tesvecX.size()) << std::endl;
 
-	std::cout << "accuracy = " << double(goodCount) / double(tesvecVX.size()) << std::endl;
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
