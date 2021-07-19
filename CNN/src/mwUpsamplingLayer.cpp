@@ -52,9 +52,9 @@ const mwTensorView<Scalar> mwUpsamplingLayer<Scalar>::Input() const
 template<typename Scalar>
 void mwUpsamplingLayer<Scalar>::Backprop(const mwTensorView<Scalar>& nextDelta)
 {
-	for (size_t d = 0; d < m_delta.Depth(); ++d)
+	for (size_t d = 0; d < m_delta.ToView().Depth(); ++d)
 	{
-		dmMatrixView<Scalar> matrDelta = m_delta(d);
+		dmMatrixView<Scalar> matrDelta = m_delta.ToView()(d);
 		dmMatrixView<Scalar> matrOutDelta = nextDelta(d);
 		for (size_t i = 0; i < matrOutDelta.RowCount(); ++i)
 		{
@@ -76,11 +76,11 @@ template<typename Scalar>
 void mwUpsamplingLayer<Scalar>::Forward(const mwTensorView<Scalar>& input)
 {
 	m_in = input;
-	m_out.SetToZero();
+	m_out.ToView().SetToZero();
 	for (size_t d = 0; d < input.Depth(); ++d)
 	{
 		dmMatrixView<Scalar> matrIn = input(d);
-		dmMatrixView<Scalar> matrOut = m_out(d);
+		dmMatrixView<Scalar> matrOut = m_out.ToView()(d);
 		for (size_t i = 0; i < matrOut.RowCount(); ++i)
 		{
 			for (size_t j = 0; j < matrOut.ColCount(); ++j)
@@ -115,4 +115,6 @@ mwTensorView<Scalar> mwUpsamplingLayer<Scalar>::GetOutShape() const
 	return tensor;
 }
 
+template struct mwUpsamplingLayer<float>;
+template struct mwUpsamplingLayer<double>;
 }

@@ -5,30 +5,25 @@ namespace layers
 template<typename Scalar>
 mwFCLayer<Scalar>::mwFCLayer(
 	const size_t outSize,
-	const mwTensorView<Scalar>& inputShape)
+	const mwTensorView<Scalar>& inputShape,
+	const std::shared_ptr<mwInitialization<Scalar>> init
+		/*= std::make_shared<mwHeInitialization<Scalar>>()*/)
 	:mwLayer(inputShape),
 	m_out(1, 1, outSize),
 	m_delta(inputShape.RowCount(), inputShape.ColCount(), inputShape.Depth()),
 	m_grads(nullptr, outSize, inputShape.Size(), 1),
 	m_biasGrads(nullptr, 1, 1, outSize),
 	m_weights(nullptr, outSize, inputShape.Size(), 1),
-	m_bias(nullptr, 1, 1, outSize)
+	m_bias(nullptr, 1, 1, outSize),
+	m_init(init)
 {
 }
 
 template<typename Scalar>
 void mwFCLayer<Scalar>::Init()
 {
-	mwVectorView<Scalar> w = m_weights.ToVectorView();
-	mwVectorView<Scalar> b = m_bias.ToVectorView();
-	for (size_t i = 0; i < w.size(); ++i)
-	{
-		w[i] = this->m_initializer();
-	}
-	for (size_t i = 0; i < b.size(); ++i)
-	{
-		b[i] = this->m_initializer();
-	}
+	m_init->Init(m_weights.ColCount(), m_weights);
+	m_init->Init(m_bias.Size(), m_bias);
 }
 
 

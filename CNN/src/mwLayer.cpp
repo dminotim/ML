@@ -6,18 +6,16 @@ namespace layers
 {
 
 template<typename Scalar>
-mwLayer<Scalar>::mwLayer(const mwTensorView<Scalar>& inputShape,
-	const std::function<Scalar()>& initializer)
-	: m_inputShape(inputShape), m_initializer(initializer)
+mwLayer<Scalar>::mwLayer(const mwTensorView<Scalar>& inputShape)
+	: m_inputShape(inputShape)
 {
 }
 
 template<typename Scalar>
 mwLayer<Scalar>::mwLayer(const size_t rowCount,
 	const size_t colCount,
-	const size_t depth,
-	const std::function<Scalar()>& initializer)
-	: m_inputShape(nullptr, rowCount, colCount, depth), m_initializer(initializer)
+	const size_t depth)
+	: m_inputShape(nullptr, rowCount, colCount, depth)
 {
 }
 

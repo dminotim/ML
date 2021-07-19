@@ -6,10 +6,10 @@ namespace layers
 {
 
 template<typename Scalar>
-struct mwDropOutLayer : public mwLayer<Scalar>
+struct mwSigmoid : public mwLayer<Scalar>
 {
-	mwDropOutLayer(
-		const mwTensorView<Scalar>& inputShape, const Scalar treshold = Scalar(0.5), const int seed = 3731);
+	mwSigmoid(
+		const mwTensorView<Scalar>& inputShape);
 
 	mwTensorView<Scalar> GetOutShape() const override;
 
@@ -23,38 +23,31 @@ struct mwDropOutLayer : public mwLayer<Scalar>
 	const mwTensorView<Scalar> Output() const override;
 	const mwTensorView<Scalar> GetDerivatives() const override;
 	void Init() override;
-	Scalar Treshold() const;
 	const mwTensorView<Scalar> Input() const override;
 	void SetDeltaToZero() override;
 
 	template <class BinStream>
 	void serialize(BinStream& stream)
 	{
-		stream << m_inputShape.RowCount()
+		stream
+			<< m_inputShape.RowCount()
 			<< m_inputShape.ColCount()
-			<< m_inputShape.Depth()
-			<< Treshold();
+			<< m_inputShape.Depth();
 	}
 
 	template <class BinStream>
-	static std::shared_ptr<mwDropOutLayer<Scalar> > deserialize(BinStream& stream)
+	static std::shared_ptr<mwSigmoid<Scalar> > deserialize(BinStream& stream)
 	{
 		size_t rowC, colC, depth;
-		Scalar treshold;
-		stream >> rowC >> colC >> depth >> treshold;
+		stream >> rowC >> colC >> depth;
 		auto inShape = mwTensorView<Scalar>(
 			nullptr, rowC, colC, depth);
-
-		return std::make_shared<mwDropOutLayer<Scalar>>(inShape, treshold);
+		return std::make_shared<mwSigmoid<Scalar>>(inShape);
 	}
 private:
 	mwTensorView<Scalar> m_in;
 	mwTensor<Scalar> m_out;
 	mwTensor<Scalar> m_delta;
-	mwTensor<int> m_activated;
-	Scalar m_treshold;
-	std::default_random_engine m_engine;
-	std::uniform_real_distribution<Scalar> m_uniformDist;
 };
 
 }

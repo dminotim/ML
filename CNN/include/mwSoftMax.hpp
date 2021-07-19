@@ -24,6 +24,26 @@ struct mwSoftMax : public mwLayer<Scalar>
 	void Init() override;
 	const mwTensorView<Scalar> Input() const override;
 	void SetDeltaToZero() override;
+
+
+	template <class BinStream>
+	void serialize(BinStream& stream)
+	{
+		stream
+			<< m_inputShape.RowCount()
+			<< m_inputShape.ColCount()
+			<< m_inputShape.Depth();
+	}
+
+	template <class BinStream>
+	static std::shared_ptr<mwSoftMax<Scalar> > deserialize(BinStream& stream)
+	{
+		size_t rowC, colC, depth;
+		stream >> rowC >> colC >> depth;
+		auto inShape = mwTensorView<Scalar>(
+			nullptr, rowC, colC, depth);
+		return std::make_shared<mwSoftMax<Scalar>>(inShape);
+	}
 private:
 	mwTensorView<Scalar> m_in;
 	mwTensor<Scalar> m_out;

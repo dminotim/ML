@@ -81,7 +81,7 @@ std::vector<T> BackSubstitution(const dmMatrix<T>& matr, const std::vector<T>& b
 	for (int k = b.size() - 1; k >= 0; k--)
 	{
 		sum = 0;
-		for (size_t j = k + 1; j < b.size(); j++)
+		for (size_t j = size_t(k + 1); j < b.size(); j++)
 		{
 			sum += matr(k, j) * solution[j];
 		}

@@ -1,6 +1,10 @@
 #include "StdAfx.h"
 #include "CNN/include/mwCNN.hpp"
 #include <iostream>
+#include <fstream>
+#include "dmBinaryStream.hpp"
+#include "mwLayerSerializer.hpp"
+#include "dmDataReader.hpp"
 
 template<typename Scalar>
 mwCNN<Scalar>::mwCNN()
@@ -196,10 +200,10 @@ std::vector<Scalar> mwCNN<Scalar>::GetNumericDeltas(
 }
 
 template<typename Scalar>
-mwTensorView<Scalar> mwCNN<Scalar>::Predict(const mwTensorView<Scalar>& x) const
+mwTensorView<Scalar> mwCNN<Scalar>::Predict(const mwTensor<Scalar>& x) const
 {
 	ValidateFinalization();
-	m_layers[0]->Forward(x);
+	m_layers[0]->Forward(x.ToView());
 	mwTensorView<Scalar> prevOut = m_layers[0]->Output();
 	for (size_t i = 1; i < m_layers.size(); ++i)
 	{
@@ -222,22 +226,25 @@ void mwCNN<Scalar>::AddLayer(const std::shared_ptr<layers::mwLayer<Scalar>> laye
 }
 
 template<typename Scalar>
-void mwCNN<Scalar>::Fit(const std::vector<mwTensorView<Scalar>>& x,
-	const std::vector<mwTensorView<Scalar>>& y,
+void mwCNN<Scalar>::Fit(const std::vector<mwTensor<Scalar>>& x,
+	const std::vector<mwTensor<Scalar>>& y,
 	std::shared_ptr<mwOptimizer<Scalar>> opt,
 	std::shared_ptr<mwLossFunction<Scalar>> loss,
 	const size_t epochCount /*= 1*/,
 	const size_t batchSize /*= 1*/)
 {
+	std::vector<mwTensorView<Scalar>> xv;
+	std::vector<mwTensorView<Scalar>> yv;
+	dmReader::ConvertToTensorView(x, y, xv, yv);
 	for (size_t ep = 0; ep < epochCount; ++ep)
 	{
 		Scalar err = 0;
 		size_t steps = 0;
-		for (size_t start = 0, end = x.size(), next = 0;
+		for (size_t start = 0, end = xv.size(), next = 0;
 			start < end; start = next)
 		{
 			next = std::min(start + batchSize, end);
-			const Scalar currentLoss = TrainBatch(opt, loss, x, y, start, next);
+			const Scalar currentLoss = TrainBatch(opt, loss, xv, yv, start, next);
 			err += currentLoss;
 			std::cout << "epoch " << ep  << " Batch " << steps << " loss = " << currentLoss << std::endl;
 			++steps;
@@ -247,6 +254,81 @@ void mwCNN<Scalar>::Fit(const std::vector<mwTensorView<Scalar>>& x,
 		std::cout << "epoch " << ep << " loss=" << err / Scalar(steps) << std::endl;*/
 	}
 }
+
+template<typename Scalar>
+void mwCNN<Scalar>::Load(const std::string& filePath)
+{
+	std::ifstream stream(filePath.c_str(), std::ios::binary);
+	std::vector<char> allSymbols;
+	
+	while (!stream.eof())
+	{
+		char c;
+		stream.read((char*)(&c), 1);
+		allSymbols.push_back(c);
+	}
+	dmBinIStream binStream(allSymbols);
+	size_t layersSize;
+	binStream >> layersSize;
+	for (size_t i = 0; i < layersSize; ++i)
+	{
+		int typeInt;
+		binStream >> typeInt;
+		layers::mwLayerType type(
+			static_cast<layers::mwLayerType>(typeInt));
+		this->AddLayer(serializer::DeserializeLayer(binStream, type, m_layers));
+	}
+	this->Finalize();
+	size_t wSize;
+	binStream >> wSize;
+	if (wSize != m_weightsSpace.size())
+		throw std::exception("Invaild size");
+	for (size_t i = 0; i < wSize; ++i)
+	{
+		binStream >> m_weightsSpace[i];
+	}
+	for (size_t i = 0; i < wSize; ++i)
+	{
+		binStream >> m_gradsSpace[i];
+	}
+}
+
+template<typename Scalar>
+void mwCNN<Scalar>::Save(const std::string& filePath)
+{
+	dmBinOStream binStream;
+	binStream << m_layers.size();
+	for (size_t i = 0; i < m_layers.size(); ++i)
+	{
+		binStream << int(m_layers[i]->GetType());
+		serializer::SerializeLayer(binStream,
+			m_layers[i]->GetType(),*m_layers[i], m_layers);
+	}
+	binStream << m_weightsSpace.size();
+	for (size_t i = 0; i < m_weightsSpace.size(); ++i)
+	{
+		binStream << m_weightsSpace[i];
+	}
+	for (size_t i = 0; i < m_gradsSpace.size(); ++i)
+	{
+		binStream << m_gradsSpace[i];
+	}
+	std::ofstream stream(filePath.c_str(),
+		 std::ios::binary );
+	for (char c : binStream.m_values)
+	{
+		stream << c;
+	}
+	stream.close();
+}
+
+
+template<typename Scalar>
+std::vector<std::shared_ptr<layers::mwLayer<Scalar>>> mwCNN<Scalar>::Layers()
+{
+	return m_layers;
+}
+
 
 template struct mwCNN<double>;
 template struct mwCNN<float>;

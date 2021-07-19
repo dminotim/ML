@@ -3,25 +3,32 @@
 namespace layers
 {
 template<typename Scalar>
-size_t SumDepth(const std::vector< std::shared_ptr<mwLayer<Scalar>> >& layersVec)
+size_t SumDepth(
+	const std::vector< std::shared_ptr<mwLayer<Scalar>> >& layersVec,
+	const std::vector<size_t>& indicesToConcat)
 {
 	size_t sum = 0;
-	for (auto layer : layersVec)
+	for (size_t idx : indicesToConcat)
 	{
-		sum += layer->GetOutShape().Depth();
+		sum += layersVec[idx]->GetOutShape().Depth();
 	}
 	return sum;
 }
 
 template<typename Scalar>
 mwConcatLayer<Scalar>::mwConcatLayer(
-	const std::vector<std::shared_ptr<mwLayer<Scalar>>> toConcat,
+	const std::vector<std::shared_ptr<mwLayer<Scalar>>>& toConcat,
+	const std::vector<size_t>& idxsToConcat,
 	const mwTensorView<Scalar>& inputShape)
 	:mwLayer(inputShape),
-	m_concatenated(toConcat),
-	m_out(inputShape.RowCount(), inputShape.ColCount(), SumDepth<Scalar>(toConcat) + inputShape.Depth()),
-	m_delta(inputShape.RowCount(), inputShape.ColCount(), inputShape.Depth())
+	m_out(inputShape.RowCount(), inputShape.ColCount(), SumDepth<Scalar>(toConcat, idxsToConcat) + inputShape.Depth()),
+	m_delta(inputShape.RowCount(), inputShape.ColCount(), inputShape.Depth()),
+	m_idxs(idxsToConcat)
 {
+	for (size_t idx : idxsToConcat)
+	{
+		m_concatenated.push_back(toConcat[idx]);
+	}
 }
 
 template<typename Scalar>

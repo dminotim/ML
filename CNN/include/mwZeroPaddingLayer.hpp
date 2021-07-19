@@ -28,6 +28,25 @@ struct mwZeroPaddingLayer : public mwLayer<Scalar>
 
 	const mwTensorView<Scalar> Input() const override;
 	void SetDeltaToZero() override;
+
+	template <class BinStream>
+	void serialize(BinStream& stream)
+	{
+		stream
+			<< m_inputShape.RowCount()
+			<< m_inputShape.ColCount()
+			<< m_inputShape.Depth() << Padding();
+	}
+
+	template <class BinStream>
+	static std::shared_ptr<mwZeroPaddingLayer<Scalar> > deserialize(BinStream& stream)
+	{
+		size_t rowC, colC, depth, padding;
+		stream >> rowC >> colC >> depth >> padding;
+		auto inShape = mwTensorView<Scalar>(
+			nullptr, rowC, colC, depth);
+		return std::make_shared<mwZeroPaddingLayer<Scalar>>(padding, inShape);
+	}
 private:
 	mwTensorView<Scalar> m_in;
 	mwTensor<Scalar> m_out;

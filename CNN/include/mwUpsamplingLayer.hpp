@@ -26,6 +26,27 @@ struct mwUpsamplingLayer : public mwLayer<Scalar>
 	size_t Kernel() const;
 	const mwTensorView<Scalar> Input() const override;
 	void SetDeltaToZero() override;
+
+
+
+	template <class BinStream>
+	void serialize(BinStream& stream)
+	{
+		stream
+			<< m_inputShape.RowCount()
+			<< m_inputShape.ColCount()
+			<< m_inputShape.Depth() << m_kernel;
+	}
+
+	template <class BinStream>
+	static std::shared_ptr<mwUpsamplingLayer<Scalar> > deserialize(BinStream& stream)
+	{
+		size_t rowC, colC, depth, kernel;
+		stream >> rowC >> colC >> depth >> kernel;
+		auto inShape = mwTensorView<Scalar>(
+			nullptr, rowC, colC, depth);
+		return std::make_shared<mwUpsamplingLayer<Scalar>>(kernel, inShape);
+	}
 private:
 	mwTensorView<Scalar> m_in;
 	mwTensor<Scalar> m_out;

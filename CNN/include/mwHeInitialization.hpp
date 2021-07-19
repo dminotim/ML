@@ -1,10 +1,13 @@
 #pragma  once
 #include "mwTensor.hpp"
-#include "mwLossFunction.hpp"
+#include "mwInitialization.hpp"
 
 template<typename Scalar>
-struct mwCrossEntropyLossFunction : public mwLossFunction<Scalar>
+struct mwHeInitialization: public mwInitialization<Scalar>
 {
-	mwTensor<Scalar>  CalcCost(const mwTensorView<Scalar>& values, const mwTensorView<Scalar>& expected) override;
-	mwTensor<Scalar> CalcDelta(const mwTensorView<Scalar>& values, const mwTensorView<Scalar>& expected) override;
+	mwHeInitialization();
+	void Init(
+		const size_t inputCount,
+		mwTensorView<Scalar>& toInit) override;
 };
+

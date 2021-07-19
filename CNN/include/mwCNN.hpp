@@ -9,8 +9,8 @@ struct mwCNN
 {
 	mwCNN();
 	void Fit(
-		const std::vector<mwTensorView<Scalar>>& x,
-		const std::vector<mwTensorView<Scalar>>& y,
+		const std::vector<mwTensor<Scalar>>& x,
+		const std::vector<mwTensor<Scalar>>& y,
 		std::shared_ptr<mwOptimizer<Scalar>> opt,
 		std::shared_ptr<mwLossFunction<Scalar>> loss,
 		const size_t epochCount = 1,
@@ -18,7 +18,7 @@ struct mwCNN
 
 	void AddLayer(const std::shared_ptr<layers::mwLayer<Scalar>> layer);
 
-	mwTensorView<Scalar> Predict(const mwTensorView<Scalar>& x) const;
+	mwTensorView<Scalar> Predict(const mwTensor<Scalar>& x) const;
 
 	std::vector<Scalar> GetAnaliticDeltas(
 		std::shared_ptr<mwLossFunction<Scalar>> loss,
@@ -41,6 +41,11 @@ struct mwCNN
 		const mwTensorView<Scalar>& expectedY,
 		std::shared_ptr<mwLossFunction<Scalar>> loss) const;
 	void Finalize();
+
+	void Save(const std::string& filePath);
+
+	void Load(const std::string& filePath);
+	std::vector<std::shared_ptr<layers::mwLayer<Scalar>>> Layers();
 private:
 	void SetZeros();
 	void ValidateFinalization() const;
@@ -62,5 +67,4 @@ private:
 	std::vector<Scalar> m_gradsSpace;
 	bool m_isFinalized;
 };
-
 

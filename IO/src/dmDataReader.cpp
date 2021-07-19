@@ -48,6 +48,58 @@ clusteriser::dmImage ConvertTensorToImg(const mwTensorView<Scalar>& tens)
 }
 
 template <class Scalar>
+mwTensor<Scalar>
+ConvertImgToTensor(const clusteriser::dmImage& img, const bool grayscale)
+{
+	if (grayscale)
+	{
+		mwTensor<Scalar> res(img.GetHeight(), img.GetWidth(), 1);
+		for (size_t i = 0; i < img.GetWidth(); ++i)
+		{
+			for (size_t j = 0; j < img.GetHeight(); ++j)
+			{
+				res.ToView()(j, i, 0) = img(i, j).red /  255.;
+			}
+		}
+		return res;
+	}
+	else
+	{
+		mwTensor<Scalar> res(img.GetHeight(), img.GetWidth(), 3);
+		for (size_t i = 0; i < img.GetWidth(); ++i)
+		{
+			for (size_t j = 0; j < img.GetHeight(); ++j)
+			{
+				res.ToView()(j, i, 0) = img(i, j).red / 255.;
+				res.ToView()(j, i, 1) = img(i, j).green / 255.;
+				res.ToView()(j, i, 2) = img(i, j).blue / 255.;
+			}
+		}
+		return res;
+	}
+}
+
+template <class Scalar>
+void DownloadXYImage(
+	const std::string& trainXFolder,
+	const std::string& trainYFolder,
+	std::vector<mwTensor<Scalar>>& x,
+	std::vector<mwTensor<Scalar>>& y)
+{
+	std::filesystem::directory_iterator end_itr;
+	for (std::filesystem::directory_iterator itr(trainXFolder); itr != end_itr; ++itr)
+	{
+		clusteriser::dmImage img = clusteriser::IO::ReadImage(itr->path().string());
+		x.push_back(ConvertImgToTensor<Scalar>(img));
+	}
+	for (std::filesystem::directory_iterator itr(trainYFolder); itr != end_itr; ++itr)
+	{
+		clusteriser::dmImage img = clusteriser::IO::ReadImage(itr->path().string());
+		y.push_back(ConvertImgToTensor<Scalar>(img));
+	}
+}
+
+template <class Scalar>
 std::vector<std::pair<Scalar, clusteriser::dmImage >> DownloadMNIST(
 	const std::string& testFilestFolder)
 {
@@ -68,7 +120,7 @@ std::vector<std::pair<Scalar, clusteriser::dmImage >> DownloadMNIST(
 		const std::string pathtoSub = testFilestFolder + d;
 		size_t count = 0;
 		for (std::filesystem::directory_iterator itr(pathtoSub);
-			itr != end_itr && count < 800; ++itr)
+			itr != end_itr && count < 80; ++itr)
 		{
 			clusteriser::dmImage img = clusteriser::IO::ReadImage(itr->path().string());
 			res.emplace_back(Scalar(num), std::move(img));
@@ -167,6 +219,28 @@ DownloadMNIST<float>(const std::string& testFilestFolder);
 
 template std::vector<std::pair<double, clusteriser::dmImage >>
 DownloadMNIST<double>(const std::string& testFilestFolder);
+
+
+template void
+DownloadXYImage<double>(
+	const std::string& trainXFolder,
+	const std::string& trainYFolder,
+	std::vector<mwTensor<double>>& x,
+	std::vector<mwTensor<double>>& y);
+
+template void
+DownloadXYImage<float>(
+	const std::string& trainXFolder,
+	const std::string& trainYFolder,
+	std::vector<mwTensor<float>>& x,
+	std::vector<mwTensor<float>>& y);
+
+template 
+mwTensor<float> ConvertImgToTensor(const clusteriser::dmImage& img,
+	const bool grayscale);
+template
+mwTensor<double> ConvertImgToTensor(const clusteriser::dmImage& img,
+	const bool grayscale);
 
 
 }

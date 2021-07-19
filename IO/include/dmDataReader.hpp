@@ -18,6 +18,12 @@ namespace dmReader
 	clusteriser::dmImage ConvertTensorToImg(const mwTensorView<Scalar>& tens);
 
 	template <class Scalar>
+	mwTensor<Scalar> ConvertImgToTensor(const clusteriser::dmImage& img,
+		const bool grayscale = true);
+
+
+
+	template <class Scalar>
 	void ConvertToTensorView(const std::vector<mwTensor<Scalar>>& x,
 		const std::vector<mwTensor<Scalar>>& y,
 		std::vector<mwTensorView<Scalar>>& xv,
@@ -28,4 +34,12 @@ namespace dmReader
 
 	template <class Scalar>
 	std::vector<std::pair<Scalar, clusteriser::dmImage >> DownloadMNIST(const std::string& testFilestFolder);
+
+	template <class Scalar>
+	void DownloadXYImage(
+		const std::string& trainXFolder,
+		const std::string& trainYFolder,
+		std::vector<mwTensor<Scalar>>& x,
+		std::vector<mwTensor<Scalar>>& y);
+
 }

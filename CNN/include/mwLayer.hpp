@@ -13,38 +13,23 @@ enum class mwLayerType
 	MAX_POOL,
 	UPSAMPLING,
 	ZERO_PADDING,
+	SIGMOID,
 	DROP_OUT,
 	CONCAT,
 	SOFTMAX,
 	UNKNOWN
 };
 
-template<typename Scalar>
-struct mwRandInit
-{
-	mwRandInit()
-		:m_engine(22),
-		m_uniformDist(Scalar(0), Scalar(0.05))
-	{
-	}
-	const Scalar operator()() {
-		return m_uniformDist(m_engine);
-	}
-	std::default_random_engine m_engine;
-	std::normal_distribution<Scalar> m_uniformDist;
-};
 
 
 
 template<typename Scalar>
 struct mwLayer
 {
-	mwLayer(const mwTensorView<Scalar>& inputShape,
-		const std::function<Scalar()>& initializer = mwRandInit<Scalar>());
+	mwLayer(const mwTensorView<Scalar>& inputShape);
 	mwLayer(const size_t rowCount,
 		const size_t colCount,
-		const size_t depth,
-		const std::function<Scalar()>& initializer = mwRandInit<Scalar>());
+		const size_t depth);
 	mwTensorView<Scalar> InputShape() const;
 	void InputShape(const mwTensorView<Scalar>& val);
 
@@ -63,8 +48,6 @@ struct mwLayer
 	virtual void SetDeltaToZero() = 0;
 	virtual const mwTensorView<Scalar> GetDerivatives() const = 0;
 protected:
-	std::function<Scalar()> m_initializer;
-private:
 	mwTensorView<Scalar> m_inputShape;
 };
 
