@@ -117,7 +117,7 @@ void mwMaxPoolLayer<Scalar>::Forward(const mwTensorView<Scalar>& input)
 }
 
 template<typename Scalar>
-void mwMaxPoolLayer<Scalar>::MapData(Scalar* /*weights*/, Scalar* /*gradient*/)
+void mwMaxPoolLayer<Scalar>::MapData(Scalar* /*weights*/, Scalar* /*gradient*/, Scalar* /*wokSpace*/)
 {
 }
 

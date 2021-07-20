@@ -78,7 +78,7 @@ void mwZeroPaddingLayer<Scalar>::Forward(const mwTensorView<Scalar>& input)
 	mwTensorView<Scalar> outView = m_out.ToView();
 	outView.SetToZero();
 
-	for (size_t feature = 0; feature < outView.Depth(); ++feature)
+	for (size_t feature = 0; feature < input.Depth(); ++feature)
 	{
 		dmMatrixView<Scalar> matrOut = outView(feature);
 		dmMatrixView<Scalar> matrIn = input(feature);
@@ -93,7 +93,7 @@ void mwZeroPaddingLayer<Scalar>::Forward(const mwTensorView<Scalar>& input)
 }
 
 template<typename Scalar>
-void mwZeroPaddingLayer<Scalar>::MapData(Scalar* /*weights*/, Scalar* /*gradient*/)
+void mwZeroPaddingLayer<Scalar>::MapData(Scalar* /*weights*/, Scalar* /*gradient*/, Scalar* /*wokSpace*/)
 {
 }
 

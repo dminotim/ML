@@ -1,5 +1,5 @@
 #include "mwSigmoid.hpp"
-
+#include <iostream>
 namespace layers
 {
 template<typename Scalar>
@@ -73,7 +73,7 @@ void mwSigmoid<Scalar>::Forward(const mwTensorView<Scalar>& input)
 }
 
 template<typename Scalar>
-void mwSigmoid<Scalar>::MapData(Scalar* /*weights*/, Scalar* /*gradient*/)
+void mwSigmoid<Scalar>::MapData(Scalar* /*weights*/, Scalar* /*gradient*/, Scalar* /*wokSpace*/)
 {
 }
 

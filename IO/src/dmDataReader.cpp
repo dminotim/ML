@@ -120,7 +120,7 @@ std::vector<std::pair<Scalar, clusteriser::dmImage >> DownloadMNIST(
 		const std::string pathtoSub = testFilestFolder + d;
 		size_t count = 0;
 		for (std::filesystem::directory_iterator itr(pathtoSub);
-			itr != end_itr && count < 80; ++itr)
+			itr != end_itr && count < 800; ++itr)
 		{
 			clusteriser::dmImage img = clusteriser::IO::ReadImage(itr->path().string());
 			res.emplace_back(Scalar(num), std::move(img));

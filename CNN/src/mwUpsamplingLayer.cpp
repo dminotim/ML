@@ -92,7 +92,7 @@ void mwUpsamplingLayer<Scalar>::Forward(const mwTensorView<Scalar>& input)
 }
 
 template<typename Scalar>
-void mwUpsamplingLayer<Scalar>::MapData(Scalar* /*weights*/, Scalar* /*gradient*/)
+void mwUpsamplingLayer<Scalar>::MapData(Scalar* /*weights*/, Scalar* /*gradient*/, Scalar* /*wokSpace*/)
 {
 }
 

@@ -92,7 +92,7 @@ void mwSoftMax<Scalar>::Forward(const mwTensorView<Scalar>& input)
 }
 
 template<typename Scalar>
-void mwSoftMax<Scalar>::MapData(Scalar* /*weights*/, Scalar* /*gradient*/)
+void mwSoftMax<Scalar>::MapData(Scalar* /*weights*/, Scalar* /*gradient*/, Scalar* /*wokSpace*/)
 {
 }
 

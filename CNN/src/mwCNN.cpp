@@ -122,13 +122,20 @@ template<typename Scalar>
 void mwCNN<Scalar>::Finalize()
 {
 	size_t curMapIdx = 0;
+	size_t maxSize = 0;
+	for (auto& lptr : m_layers)
+	{
+		maxSize = std::max(lptr->GetOutShape().RowCount()
+			* lptr->GetOutShape().ColCount() * lptr->OptimizedParamsCount(), maxSize);
+	}
+	m_workSpace.resize(maxSize, Scalar(0));
 	for (auto& lptr : m_layers)
 	{
 		const size_t dataSize = lptr->OptimizedParamsCount();
 		if (dataSize == 0)
 			continue;
 		lptr->MapData(
-			&m_weightsSpace[curMapIdx], &m_gradsSpace[curMapIdx]);
+			&m_weightsSpace[curMapIdx], &m_gradsSpace[curMapIdx], &m_workSpace[0]);
 		curMapIdx += dataSize;
 	}
 	m_isFinalized = true;

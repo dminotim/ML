@@ -16,7 +16,7 @@ struct mwMaxPoolLayer : public mwLayer<Scalar>
 
 	mwLayerType GetType() const override;
 	size_t OptimizedParamsCount() const override;
-	void MapData(Scalar* weights, Scalar* gradient) override;
+	void MapData(Scalar* weights, Scalar* gradient, Scalar* wokSpace) override;
 
 	void Forward(const mwTensorView<Scalar>& input) override;
 	void CalcGrads(const mwTensorView<Scalar>& nextDelta) override;

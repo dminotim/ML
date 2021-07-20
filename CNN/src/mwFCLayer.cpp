@@ -84,9 +84,9 @@ void mwFCLayer<Scalar>::CalcGrads(const mwTensorView<Scalar>& nextDelta)
 	{
 		for (size_t i = 0; i < inVec.size(); ++i)
 		{
-			G(j, i) = inVec[i] * nextDeltaVec[j];
+			G(j, i) += inVec[i] * nextDeltaVec[j];
 		}
-		BG[j] = nextDeltaVec[j];
+		BG[j] += nextDeltaVec[j];
 	}
 }
 
@@ -104,12 +104,13 @@ void mwFCLayer<Scalar>::Forward(const mwTensorView<Scalar>& input)
 }
 
 template<typename Scalar>
-void mwFCLayer<Scalar>::MapData(Scalar* weights, Scalar* gradient)
+void mwFCLayer<Scalar>::MapData(Scalar* weights, Scalar* gradient, Scalar* wokSpace)
 {
 	m_weights.SetView(weights);
 	m_bias.SetView(weights + m_weights.Size());
 	m_grads.SetView(gradient);
 	m_biasGrads.SetView(gradient + m_grads.Size());
+	m_workSpace.SetView(wokSpace);
 }
 
 template<typename Scalar>

@@ -2,9 +2,16 @@
 #include "mwTensor.hpp"
 #include <functional>
 #include <random>
+#include <memory>
 
 namespace layers
 {
+enum class mwPaddingType
+{
+	VALID,
+	SAME
+};
+
 enum class mwLayerType
 {
 	FULLY_CONNECTED,
@@ -38,7 +45,7 @@ struct mwLayer
 	virtual mwLayerType GetType() const = 0;
 	virtual size_t OptimizedParamsCount() const = 0;
 	virtual void Init() = 0;
-	virtual void MapData(Scalar* weights, Scalar* gradient) = 0;
+	virtual void MapData(Scalar* weights, Scalar* gradient, Scalar* wokSpace) = 0;
 
 	virtual void Forward(const mwTensorView<Scalar>& input) = 0;
 	virtual void CalcGrads(const mwTensorView<Scalar>& nextDelta) = 0;

@@ -7,8 +7,8 @@ void mwAdamOptimizer<Scalar>::Update(const std::vector<Scalar>& grads, std::vect
 {
 	if (m_v.size() != grads.size())
 	{
-		m_v.resize(grads.size(), Scalar(0));
-		m_m.resize(grads.size(), Scalar(0));
+		m_v = std::vector<Scalar>(grads.size(), Scalar(0));
+		m_m = std::vector<Scalar>(grads.size(), Scalar(0));
 	}
 	const Scalar beta1(Scalar(0.9));
 	const Scalar beta2(Scalar(0.999));

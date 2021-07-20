@@ -1,6 +1,8 @@
 #include "mwConv2dLayer.hpp"
 #include "mwInitialization.hpp"
 #include "mwHeInitialization.hpp"
+#include "mwCNNUtils.hpp"
+#include <iostream>
 
 namespace layers
 {
@@ -22,7 +24,8 @@ mwConv2dLayer<Scalar>::mwConv2dLayer(
 	m_bias(nullptr, 1, 1, featuresCount),
 	m_featuresCount(featuresCount),
 	m_kernel(kernel),
-	m_init(init)
+	m_init(init),
+	m_workSpace(nullptr, inputShape.Depth() * kernel * kernel, m_out.ToView().RowCount() * m_out.ToView().ColCount(), 1)
 {
 }
 
@@ -64,8 +67,8 @@ size_t mwConv2dLayer<Scalar>::FeaturesCount() const { return m_featuresCount; }
 template<typename Scalar>
 void mwConv2dLayer<Scalar>::Init()
 {
-	m_init->Init(m_weights.Size(), m_weights);
-	m_init->Init(m_bias.Size(), m_bias);
+	m_init->Init(m_out.ToView().Size(), m_weights);
+	m_init->Init(m_out.ToView().Size(), m_bias);
 }
 
 template<typename Scalar>
@@ -107,7 +110,6 @@ void mwConv2dLayer<Scalar>::CalcGrads(const mwTensorView<Scalar>& nextDelta)
 	mwTensorView<Scalar> outView = m_out.ToView();
 	for (size_t feature = 0; feature < outView.Depth(); ++feature)
 	{
-		Scalar& gradBias = m_biasGrads(feature)(0, 0);
 		dmMatrixView<Scalar> matrNextDelta = nextDelta(feature);
 		for (size_t d = 0; d < m_in.Depth(); ++d)
 		{
@@ -124,8 +126,20 @@ void mwConv2dLayer<Scalar>::CalcGrads(const mwTensorView<Scalar>& nextDelta)
 							matrGrads(ki, kj) += matrIn(i + ki, j + kj) * matrNextDelta(i, j);
 						}
 					}
-					gradBias += matrNextDelta(i, j);
 				}
+			}
+		}
+	}
+
+	for (size_t feature = 0; feature < outView.Depth(); ++feature)
+	{
+		Scalar& gradBias = m_biasGrads(feature)(0, 0);
+		dmMatrixView<Scalar> matrNextDelta = nextDelta(feature);
+		for (size_t i = 0; i + step < m_in.RowCount(); ++i)
+		{
+			for (size_t j = 0; j + step < m_in.ColCount(); ++j)
+			{
+				gradBias += matrNextDelta(i, j);
 			}
 		}
 	}
@@ -138,12 +152,13 @@ void mwConv2dLayer<Scalar>::Forward(const mwTensorView<Scalar>& input)
 	const size_t step = m_kernel - 1;
 	mwTensorView<Scalar> outView = m_out.ToView();
 	outView.SetToZero();
-
-	for (size_t feature = 0; feature < outView.Depth(); ++feature)
+	mwCNNUtils::ToColumnImage(m_in, m_kernel, 0, m_workSpace);
+	mwTensorView<Scalar> ww(m_weights.m_valuesPtr, m_out.m_depth, m_workSpace.RowCount(), 1);
+	mwTensorView<Scalar> outWW(outView.m_valuesPtr, ww.RowCount(), m_workSpace.ColCount(), 1);
+	ww(0).Multiply(m_workSpace(0), outWW(0));
+	/*for (size_t feature = 0; feature < outView.Depth(); ++feature)
 	{
 		dmMatrixView<Scalar> matrOut = outView(feature);
-		
-		Scalar B = m_bias(0, 0, feature);
 		for (size_t d = 0; d < input.Depth(); ++d)
 		{
 			dmMatrixView<Scalar> W = m_weights(feature * input.Depth() + d);
@@ -160,20 +175,34 @@ void mwConv2dLayer<Scalar>::Forward(const mwTensorView<Scalar>& input)
 							sum += matrIn(i + ki, j + kj) * W(ki, kj);
 						}
 					}
-					matrOut(i, j) += sum + B;
+					matrOut(i, j) += sum;
 				}
+			}
+		}
+	}*/
+
+	for (size_t feature = 0; feature < outView.Depth(); ++feature)
+	{
+		dmMatrixView<Scalar> matrOut = outView(feature);
+		Scalar B = m_bias(0, 0, feature);
+		for (size_t i = 0; i + step < input.RowCount(); ++i)
+		{
+			for (size_t j = 0; j + step < input.ColCount(); ++j)
+			{
+				matrOut(i, j) += B;
 			}
 		}
 	}
 }
 
 template<typename Scalar>
-void mwConv2dLayer<Scalar>::MapData(Scalar* weights, Scalar* gradient)
+void mwConv2dLayer<Scalar>::MapData(Scalar* weights, Scalar* gradient, Scalar* wokSpace)
 {
 	m_weights.SetView(weights);
 	m_bias.SetView(weights + m_weights.Size());
 	m_grads.SetView(gradient);
 	m_biasGrads.SetView(gradient + m_grads.Size());
+	m_workSpace.SetView(wokSpace);
 }
 
 template<typename Scalar>

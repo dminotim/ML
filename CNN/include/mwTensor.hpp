@@ -37,6 +37,16 @@ private:
 	T* m_data;
 };
 
+void gemm_nn(int M, int N, int K,
+	float* A, int lda,
+	float* B, int ldb,
+	float* C, int ldc);
+
+void gemm_nn(int M, int N, int K,
+	double* A, int lda,
+	double* B, int ldb,
+	double* C, int ldc);
+
 template<class T>
 struct dmMatrixView
 {
@@ -75,6 +85,36 @@ struct dmMatrixView
 			res[i] = sum;
 		}
 	}
+
+	void Multiply(const dmMatrixView<T>& factors, dmMatrixView<T>& res)
+	{
+		if (this->m_colCount != factors.m_rowCount)
+			throw std::exception("Invalid matrix size");
+
+		const dmMatrixView<T>& A = *this;
+		const dmMatrixView<T>& B = factors;
+		gemm_nn(A.m_rowCount,
+			factors.m_colCount,
+			factors.m_rowCount,
+			A.m_values,
+			A.m_colCount,
+			B.m_values,
+			B.m_colCount,
+			res.m_values,
+			res.m_colCount);
+		/*for (size_t i = 0; i < res.m_rowCount; ++i)
+		{
+			for (size_t j = 0; j < res.m_colCount; ++j)
+			{
+				for (size_t k = 0; k < B.m_rowCount; ++k)
+				{
+					res.m_values[i * res.m_colCount + j] +=
+						A.m_values[i * A.m_colCount + k] * B.m_values[k * B.m_colCount + j];
+				}
+			}
+		}*/
+	}
+
 	void SetView(T* data, const size_t rowCount, const size_t colCount)
 	{
 		m_rowCount = rowCount;
@@ -177,12 +217,12 @@ struct mwTensorView
 	{
 		m_valuesPtr = data;
 	}
-
+	Scalar* m_valuesPtr;
 protected:
 	size_t m_rowCount;
 	size_t m_colCount;
 	size_t m_depth;
-	Scalar* m_valuesPtr;
+
 };
 
 template<typename Scalar>

@@ -128,7 +128,7 @@ void mwConcatLayer<Scalar>::Forward(const mwTensorView<Scalar>& input)
 }
 
 template<typename Scalar>
-void mwConcatLayer<Scalar>::MapData(Scalar* /*weights*/, Scalar* /*gradient*/)
+void mwConcatLayer<Scalar>::MapData(Scalar* /*weights*/, Scalar* /*gradient*/, Scalar* /*wokSpace*/)
 {
 }
 

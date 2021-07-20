@@ -81,7 +81,7 @@ void mwReluLayer<Scalar>::Forward(const mwTensorView<Scalar>& input)
 }
 
 template<typename Scalar>
-void mwReluLayer<Scalar>::MapData(Scalar* /*weights*/, Scalar* /*gradient*/)
+void mwReluLayer<Scalar>::MapData(Scalar* /*weights*/, Scalar* /*gradient*/, Scalar* /*wokSpace*/)
 {
 }
 

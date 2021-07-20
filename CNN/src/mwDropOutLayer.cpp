@@ -89,7 +89,7 @@ void mwDropOutLayer<Scalar>::Forward(const mwTensorView<Scalar>& input)
 }
 
 template<typename Scalar>
-void mwDropOutLayer<Scalar>::MapData(Scalar* /*weights*/, Scalar* /*gradient*/)
+void mwDropOutLayer<Scalar>::MapData(Scalar* /*weights*/, Scalar* /*gradient*/, Scalar* /*workSpace*/)
 {
 }
 

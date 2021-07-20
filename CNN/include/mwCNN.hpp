@@ -65,6 +65,7 @@ private:
 	std::vector<std::shared_ptr<layers::mwLayer<Scalar>>> m_layers;
 	std::vector<Scalar> m_weightsSpace;
 	std::vector<Scalar> m_gradsSpace;
+	std::vector<Scalar> m_workSpace;
 	bool m_isFinalized;
 };
 

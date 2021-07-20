@@ -21,7 +21,7 @@ struct mwFCLayer : public mwLayer<Scalar>
 
 	mwLayerType GetType() const override;
 	size_t OptimizedParamsCount() const override;
-	void MapData(Scalar* weights, Scalar* gradient) override;
+	void MapData(Scalar* weights, Scalar* gradient, Scalar* wokSpace) override;
 
 	void Forward(const mwTensorView<Scalar>& input) override;
 	void CalcGrads(const mwTensorView<Scalar>& nextDelta) override;
@@ -58,6 +58,7 @@ private:
 	mwTensorView<Scalar> m_weights;
 	mwTensorView<Scalar> m_bias;
 	mwTensorView<Scalar> m_biasGrads;
+	mwTensorView<Scalar> m_workSpace;
 	std::shared_ptr<mwInitialization<Scalar>> m_init;
 };
 
