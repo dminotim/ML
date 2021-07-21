@@ -5,6 +5,15 @@
 
 namespace mwCNNUtils
 {
+
+template <class Scalar>
+Scalar MovingAverage(Scalar avg, const size_t acc_number, Scalar value)
+{
+	avg -= avg / acc_number;
+	avg += value / acc_number;
+	return avg;
+}
+
 template <class Scalar>
 void ToColumnImage(const mwTensorView<Scalar>& src,
 	const size_t kernel,
@@ -45,7 +54,21 @@ void ToColumnImage(const mwTensorView<Scalar>& src,
 
 }
 
+template <class Scalar>
+void ToRowImage(const mwTensorView<Scalar>& src,
+	const size_t kernel,
+	const size_t padding,
+	mwTensorView<Scalar>& dst)
+{
+	ToColumnImage<Scalar>(src, kernel, padding, dst);
+	dst.TarnsposeZeroDepth();
+}
+
 template void ToColumnImage<double>(const mwTensorView<double>&, const size_t, const size_t, mwTensorView<double>&);
 template void ToColumnImage<float>(const mwTensorView<float>&, const size_t, const size_t, mwTensorView<float>&);
+template void ToRowImage<double>(const mwTensorView<double>&, const size_t, const size_t, mwTensorView<double>&);
+template void ToRowImage<float>(const mwTensorView<float>&, const size_t, const size_t, mwTensorView<float>&);
+template double MovingAverage<double>(double, const size_t, double);
+template float MovingAverage<float>(float, const size_t, float);
 }
 

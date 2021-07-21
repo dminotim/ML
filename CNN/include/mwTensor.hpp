@@ -122,6 +122,7 @@ struct dmMatrixView
 		m_values = data;
 	}
 
+	
 	T& operator()(const size_t i, const size_t j)
 	{
 		return m_values[i * m_colCount + j];
@@ -136,6 +137,9 @@ struct dmMatrixView
 	size_t m_rowCount;
 	T* m_values;
 };
+
+template<typename Scalar>
+class mwTensor;
 
 template<typename Scalar>
 struct mwTensorView
@@ -217,6 +221,41 @@ struct mwTensorView
 	{
 		m_valuesPtr = data;
 	}
+
+	mwTensor<Scalar> DeepCopy()
+	{
+		const size_t size = this->m_colCount * this->m_rowCount * this->m_depth;
+		mwTensor<Scalar> ten(this->m_rowCount, this->m_colCount, this->m_depth);
+
+		for (size_t i = 0; i < size; ++i)
+		{
+			ten.m_values[i] = m_valuesPtr[i];
+		}
+		return ten;
+	}
+
+	void TarnsposeZeroDepth()
+	{
+		const size_t size = this->m_colCount * this->m_rowCount;
+		std::vector<Scalar> oldVal(size);
+		for (size_t i = 0; i < size; ++i)
+		{
+			oldVal[i] = m_valuesPtr[i];
+		}
+		dmMatrixView<Scalar> old(&oldVal[0], m_rowCount, m_colCount);
+		std::swap(m_colCount, m_rowCount);
+		dmMatrixView<Scalar> self = (*this)(0);
+		for (size_t i = 0; i < old.RowCount(); i++)
+		{
+			for (size_t j = 0; j < old.ColCount(); j++)
+			{
+				self(j, i) = old(i, j);
+			}
+		}
+	}
+
+
+
 	Scalar* m_valuesPtr;
 protected:
 	size_t m_rowCount;

@@ -5,6 +5,7 @@
 #include "dmBinaryStream.hpp"
 #include "mwLayerSerializer.hpp"
 #include "dmDataReader.hpp"
+#include "mwCNNUtils.hpp"
 
 template<typename Scalar>
 mwCNN<Scalar>::mwCNN()
@@ -252,7 +253,7 @@ void mwCNN<Scalar>::Fit(const std::vector<mwTensor<Scalar>>& x,
 		{
 			next = std::min(start + batchSize, end);
 			const Scalar currentLoss = TrainBatch(opt, loss, xv, yv, start, next);
-			err += currentLoss;
+			err = mwCNNUtils::MovingAverage<Scalar>(err, steps + 1, currentLoss);
 			std::cout << "epoch " << ep  << " Batch " << steps << " loss = " << currentLoss << std::endl;
 			++steps;
 		}

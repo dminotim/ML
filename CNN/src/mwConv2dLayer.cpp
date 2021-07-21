@@ -67,8 +67,8 @@ size_t mwConv2dLayer<Scalar>::FeaturesCount() const { return m_featuresCount; }
 template<typename Scalar>
 void mwConv2dLayer<Scalar>::Init()
 {
-	m_init->Init(m_out.ToView().Size(), m_weights);
-	m_init->Init(m_out.ToView().Size(), m_bias);
+	m_init->Init(m_weights.Size(), m_weights);
+	m_init->Init(m_bias.Size(), m_bias);
 }
 
 template<typename Scalar>
@@ -108,12 +108,20 @@ void mwConv2dLayer<Scalar>::CalcGrads(const mwTensorView<Scalar>& nextDelta)
 {
 	const size_t step = m_kernel - 1;
 	mwTensorView<Scalar> outView = m_out.ToView();
+	mwCNNUtils::ToRowImage(m_in, m_kernel, 0, m_workSpace);
+
+	mwTensorView<Scalar> delats(nextDelta.m_valuesPtr, m_out.m_depth, m_workSpace.RowCount(), 1);
+	mwTensorView<Scalar> gards(m_grads.m_valuesPtr, m_out.m_depth, m_workSpace.ColCount(), 1);
+	delats(0).Multiply(m_workSpace(0), gards(0));
+	auto g = m_grads.DeepCopy();
+	auto gv = g.ToView();
+	
 	for (size_t feature = 0; feature < outView.Depth(); ++feature)
 	{
 		dmMatrixView<Scalar> matrNextDelta = nextDelta(feature);
 		for (size_t d = 0; d < m_in.Depth(); ++d)
 		{
-			dmMatrixView<Scalar> matrGrads = m_grads(feature * m_in.Depth() + d);
+			dmMatrixView<Scalar> matrGrads = gv(feature * m_in.Depth() + d);
 			dmMatrixView<Scalar> matrIn = m_in(d);
 			for (size_t i = 0; i + step < m_in.RowCount(); ++i)
 			{
@@ -130,6 +138,13 @@ void mwConv2dLayer<Scalar>::CalcGrads(const mwTensorView<Scalar>& nextDelta)
 			}
 		}
 	}
+
+	//for (size_t i = 0; i < g.m_values.size(); ++i)
+	//{
+	//	if(std::fabs(m_grads.m_valuesPtr[i] * 2 - g.m_values[i]) > Scalar(1e-4)
+	//		&& std::fabs(m_grads.m_valuesPtr[i] - g.m_values[i]) > Scalar(1e-4))
+	//	std::cout << g.m_values[i] << " " << m_grads.m_valuesPtr[i] << std::endl;
+	//}
 
 	for (size_t feature = 0; feature < outView.Depth(); ++feature)
 	{
@@ -156,6 +171,7 @@ void mwConv2dLayer<Scalar>::Forward(const mwTensorView<Scalar>& input)
 	mwTensorView<Scalar> ww(m_weights.m_valuesPtr, m_out.m_depth, m_workSpace.RowCount(), 1);
 	mwTensorView<Scalar> outWW(outView.m_valuesPtr, ww.RowCount(), m_workSpace.ColCount(), 1);
 	ww(0).Multiply(m_workSpace(0), outWW(0));
+
 	/*for (size_t feature = 0; feature < outView.Depth(); ++feature)
 	{
 		dmMatrixView<Scalar> matrOut = outView(feature);
