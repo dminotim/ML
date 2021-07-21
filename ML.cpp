@@ -51,63 +51,79 @@ int main()
 	std::shared_ptr<mwOptimizer<float>> optimizer = std::make_shared<mwAdamOptimizer<float>>();
 
 	std::shared_ptr<mwLossFunction<float>> lossMse = std::make_shared<mwCrossEntropyLossFunction<float>>();
-
+	mwTensor<float> tbefore(4, 4, 1);
+	mwTensor<float> tdst(9, 4, 1);
+	mwTensorView<float> tbeforeV = tbefore.ToView();
+	for (int i = 0; i < 16; ++i)
 	{
-	/*	auto mnist = dmReader::DownloadMNIST<float>("C:\\projects\\MyML\\mnist_png\\training\\");
+		tbeforeV.ToVectorView()[i] = float(i);
+	}
+	auto view = tdst.ToView();
+	//view.TarnsposeZeroDepth();
+	
+	mwCNNUtils::ToRowImage(tbeforeV, 3, 0, view);
+	view.TarnsposeZeroDepth();
+	view.TarnsposeZeroDepth();
+	view.TarnsposeZeroDepth();
+	view.TarnsposeZeroDepth();
+	for (size_t i = 0; i < view.RowCount(); ++i)
+	{
+		std::cout << std::endl;
+		for (size_t j = 0; j < view.ColCount(); ++j)
+		{
+			std::cout << view(i, j, 0) << " ";
+		}
+	}
+	std::cout << std::endl;
+	{
+		auto mnist = dmReader::DownloadMNIST<float>("C:\\projects\\MyML\\mnist_png\\training\\");
 		unsigned seed = 234324;
-		std::shuffle(mnist.begin(), mnist.end(), std::default_random_engine(seed));*/
-		/*
-		layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
-		layers.MaxPooling2D(pool_size=(2, 2)),
-		layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
-		layers.MaxPooling2D(pool_size=(2, 2)),
-		layers.Flatten(),
-		layers.Dropout(0.5),
-		layers.Dense(num_classes, activation="softmax"),
-		*/
+		std::shuffle(mnist.begin(), mnist.end(), std::default_random_engine(seed));
 		
-	/*	std::vector<mwTensor<float>> tesvecX;
-		std::vector<mwTensor<float>> tesvecY;
-		dmReader::ConvertMNISTToTensors(mnist, tesvecX, tesvecY);*/
+		//std::vector<mwTensor<float>> tesvecX;
+		//std::vector<mwTensor<float>> tesvecY;
+		//dmReader::DownloadXYImage("C:\\projects\\TEST\\cases2\\input\\",
+		//	"C:\\projects\\TEST\\cases2\\output\\",
+		//	tesvecX, tesvecY);
+
+		//mwTensorView<float> inputShape(nullptr, 256, 256, 1);
+		//mwUnetCreator::Create(inputShape, cnn);
 		std::vector<mwTensor<float>> tesvecX;
 		std::vector<mwTensor<float>> tesvecY;
-		dmReader::DownloadXYImage("C:\\projects\\paint_by_number\\cases2\\input\\",
-			"C:\\projects\\paint_by_number\\cases2\\output\\",
-			tesvecX, tesvecY);
+		dmReader::ConvertMNISTToTensors(mnist, tesvecX, tesvecY);
 
-		mwTensorView<float> inputShape(nullptr, 256, 256, 1);
-		//mwTensorView<float> inputShape(nullptr, 28, 28, 1);
-		//cnn.AddLayer(std::make_shared<layers::mwConv2dLayer<float>>(32, 3, inputShape));
-		//cnn.AddLayer(std::make_shared<layers::mwReluLayer<float>>(cnn.Layers().back()->GetOutShape()));
-		//cnn.AddLayer(std::make_shared<layers::mwMaxPoolLayer<float>>(2, cnn.Layers().back()->GetOutShape()));
-		//cnn.AddLayer(std::make_shared<layers::mwConv2dLayer<float>>(64, 3, cnn.Layers().back()->GetOutShape()));
-		//cnn.AddLayer(std::make_shared<layers::mwReluLayer<float>>(cnn.Layers().back()->GetOutShape()));
-		//cnn.AddLayer(std::make_shared<layers::mwMaxPoolLayer<float>>(2, cnn.Layers().back()->GetOutShape()));
-		//cnn.AddLayer(std::make_shared<layers::mwDropOutLayer<float>>(cnn.Layers().back()->GetOutShape(), float(0.5)));
-		//cnn.AddLayer(std::make_shared<layers::mwFCLayer<float>>(10, cnn.Layers().back()->GetOutShape()));
-		//cnn.AddLayer(std::make_shared<layers::mwSoftMax<float>>(cnn.Layers().back()->GetOutShape()));
-		//cnn.Finalize();
-		//
-		mwUnetCreator::Create(inputShape, cnn);
+		mwTensorView<float> inputShape(nullptr, 28, 28, 1);
+		cnn.AddLayer(std::make_shared<layers::mwConv2dLayer<float>>(32, 3, inputShape));
+		cnn.AddLayer(std::make_shared<layers::mwReluLayer<float>>(cnn.Layers().back()->GetOutShape()));
+		cnn.AddLayer(std::make_shared<layers::mwMaxPoolLayer<float>>(2, cnn.Layers().back()->GetOutShape()));
+		cnn.AddLayer(std::make_shared<layers::mwConv2dLayer<float>>(64, 3, cnn.Layers().back()->GetOutShape()));
+		cnn.AddLayer(std::make_shared<layers::mwReluLayer<float>>(cnn.Layers().back()->GetOutShape()));
+		cnn.AddLayer(std::make_shared<layers::mwMaxPoolLayer<float>>(2, cnn.Layers().back()->GetOutShape()));
+		cnn.AddLayer(std::make_shared<layers::mwDropOutLayer<float>>(cnn.Layers().back()->GetOutShape(), float(0.5)));
+		cnn.AddLayer(std::make_shared<layers::mwFCLayer<float>>(10, cnn.Layers().back()->GetOutShape()));
+		cnn.AddLayer(std::make_shared<layers::mwSoftMax<float>>(cnn.Layers().back()->GetOutShape()));
+		cnn.Finalize();
+
+	
 		std::cout << "Fit" << std::endl;
 		auto b = std::chrono::high_resolution_clock::now();
-		cnn.Fit(tesvecX, tesvecY, optimizer, lossMse, 1, 5);
+		cnn.Fit(tesvecX, tesvecY, optimizer, lossMse, 1, 180);
 		auto e = std::chrono::high_resolution_clock::now();
 		std::cout << "time = " << 
 			double(std::chrono::duration_cast<std::chrono::seconds>(e - b).count())/60. << std::endl;
 		std::cout << "Fit 2" << std::endl;
 	}
 	
-	/*auto mnist = dmReader::DownloadMNIST<float>("C:\\projects\\MyML\\mnist_png\\testing\\");
+	auto mnist = dmReader::DownloadMNIST<float>("C:\\projects\\MyML\\mnist_png\\testing\\");
 	unsigned seed = 234324;
 
 	std::shuffle(mnist.begin(), mnist.end(), std::default_random_engine(seed));
 	std::vector<mwTensor<float>> tesvecX;
 	std::vector<mwTensor<float>> tesvecY;
-	dmReader::ConvertMNISTToTensors(mnist, tesvecX, tesvecY);*/
+	dmReader::ConvertMNISTToTensors(mnist, tesvecX, tesvecY);
 
-	cnn.Save("C:\\projects\\MyML\\model_unet.bin");
-	/*int goodCount = 0;
+	cnn.Save("C:\\projects\\MyMl\\model_unet.bin");
+	int goodCount = 0;
 	for (int i = 0; i < tesvecX.size(); ++i)
 	{
 		auto pred = cnn.Predict(tesvecX[i]);
@@ -118,7 +134,7 @@ int main()
 			goodCount++;
 		}
 	}
-	std::cout << "accuracy = " << double(goodCount) / double(tesvecX.size()) << std::endl;*/
+	std::cout << "accuracy = " << double(goodCount) / double(tesvecX.size()) << std::endl;
 
 }
 
