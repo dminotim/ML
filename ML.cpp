@@ -35,8 +35,6 @@
 #include "mwUnetCreator.hpp"
 #include "mwCNNUtils.hpp"
 
-
-
 int main()
 {
 	dmBinOStream out;
@@ -48,48 +46,52 @@ int main()
 	inStr >> a >> b;
 	std::cout << std::fixed << std::setprecision(14) <<  a <<" " <<  b << std::endl;
 	mwCNN<float> cnn;
+	cnn.Load("C:\\projects\\MyMl\\model_unet_5.bin");
+	std::cout << "asss 1" << std::endl;
 	std::shared_ptr<mwOptimizer<float>> optimizer = std::make_shared<mwAdamOptimizer<float>>();
 
-	std::shared_ptr<mwLossFunction<float>> lossMse = std::make_shared<mwCrossEntropyLossFunction<float>>();
-	mwTensor<float> tbefore(4, 4, 1);
-	mwTensor<float> tdst(9, 4, 1);
-	mwTensorView<float> tbeforeV = tbefore.ToView();
+	mwTensor<float> input(4, 4, 1);
+	mwTensor<float> tdst(9, 9, 1);
+	mwTensorView<float> inputV = input.ToView();
 	for (int i = 0; i < 16; ++i)
 	{
-		tbeforeV.ToVectorView()[i] = float(i);
+		inputV.ToVectorView()[i] = float(i);
 	}
-	auto view = tdst.ToView();
-	//view.TarnsposeZeroDepth();
-	
-	mwCNNUtils::ToRowImage(tbeforeV, 3, 0, view);
-	view.TarnsposeZeroDepth();
-	view.TarnsposeZeroDepth();
-	view.TarnsposeZeroDepth();
-	view.TarnsposeZeroDepth();
-	for (size_t i = 0; i < view.RowCount(); ++i)
-	{
-		std::cout << std::endl;
-		for (size_t j = 0; j < view.ColCount(); ++j)
-		{
-			std::cout << view(i, j, 0) << " ";
-		}
-	}
+	mwCNNUtils::ToColumnImage(inputV, 3, 1, tdst.ToView());
 	std::cout << std::endl;
+	for (int i = 0; i < tdst.ToView().RowCount(); ++i)
 	{
+		for (int j = 0; j < tdst.ToView().ColCount(); ++j)
+		{
+			auto v = tdst.ToView()(i, j, 0);
+			std::cout << v << " ";
+		}
+		std::cout << std::endl;
+	}
+
+	std::shared_ptr<mwLossFunction<float>> lossMse = std::make_shared<mwCrossEntropyLossFunction<float>>();
+	{
+		
+		std::vector<mwTensor<float>> tesvecX;
+		std::vector<mwTensor<float>> tesvecY; 
+		dmReader::DownloadXYImage("C:\\projects\\paint_by_number\\cases2\\input\\",
+			"C:\\projects\\paint_by_number\\cases2\\output\\",
+			tesvecX, tesvecY);
+
+		auto predicted = cnn.Predict(tesvecX[0]);
+		auto img1 = dmReader::ConvertTensorToImg(predicted);
+		auto img2 = dmReader::ConvertTensorToImg(tesvecX[0].ToView());
+		clusteriser::IO::WriteImage(img1, "C:\\projects\\MyMl\\res.png");
+		clusteriser::IO::WriteImage(img2, "C:\\projects\\MyMl\\inp.png");
+		std::cout << "asss" << std::endl;
+		mwTensorView<float> inputShape(nullptr, 256, 256, 1);
+		mwUnetCreator::Create(inputShape, cnn);
+		/*std::vector<mwTensor<float>> tesvecX;
+		std::vector<mwTensor<float>> tesvecY;
 		auto mnist = dmReader::DownloadMNIST<float>("C:\\projects\\MyML\\mnist_png\\training\\");
 		unsigned seed = 234324;
 		std::shuffle(mnist.begin(), mnist.end(), std::default_random_engine(seed));
-		
-		//std::vector<mwTensor<float>> tesvecX;
-		//std::vector<mwTensor<float>> tesvecY;
-		//dmReader::DownloadXYImage("C:\\projects\\TEST\\cases2\\input\\",
-		//	"C:\\projects\\TEST\\cases2\\output\\",
-		//	tesvecX, tesvecY);
 
-		//mwTensorView<float> inputShape(nullptr, 256, 256, 1);
-		//mwUnetCreator::Create(inputShape, cnn);
-		std::vector<mwTensor<float>> tesvecX;
-		std::vector<mwTensor<float>> tesvecY;
 		dmReader::ConvertMNISTToTensors(mnist, tesvecX, tesvecY);
 
 		mwTensorView<float> inputShape(nullptr, 28, 28, 1);
@@ -102,12 +104,12 @@ int main()
 		cnn.AddLayer(std::make_shared<layers::mwDropOutLayer<float>>(cnn.Layers().back()->GetOutShape(), float(0.5)));
 		cnn.AddLayer(std::make_shared<layers::mwFCLayer<float>>(10, cnn.Layers().back()->GetOutShape()));
 		cnn.AddLayer(std::make_shared<layers::mwSoftMax<float>>(cnn.Layers().back()->GetOutShape()));
-		cnn.Finalize();
+		cnn.Finalize();*/
 
 	
 		std::cout << "Fit" << std::endl;
 		auto b = std::chrono::high_resolution_clock::now();
-		cnn.Fit(tesvecX, tesvecY, optimizer, lossMse, 1, 180);
+		cnn.Fit(tesvecX, tesvecY, optimizer, lossMse, 20, 2);
 		auto e = std::chrono::high_resolution_clock::now();
 		std::cout << "time = " << 
 			double(std::chrono::duration_cast<std::chrono::seconds>(e - b).count())/60. << std::endl;
@@ -122,7 +124,7 @@ int main()
 	std::vector<mwTensor<float>> tesvecY;
 	dmReader::ConvertMNISTToTensors(mnist, tesvecX, tesvecY);
 
-	cnn.Save("C:\\projects\\MyMl\\model_unet.bin");
+	cnn.Save("C:\\projects\\MyMl\\model_unet_.bin");
 	int goodCount = 0;
 	for (int i = 0; i < tesvecX.size(); ++i)
 	{

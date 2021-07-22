@@ -51,8 +51,44 @@ void ToColumnImage(const mwTensorView<Scalar>& src,
 			}
 		}
 	}
-
 }
+
+template <class Scalar>
+void FromColumnImage(const mwTensorView<Scalar>& srcCol, const size_t kernel, const size_t padding, mwTensorView<Scalar>& dst)
+{
+	dmMatrixView<Scalar> outM = srcCol(0);
+	const size_t step = kernel - 1;
+	size_t rowIdx = 0;
+	for (size_t d = 0; d < dst.Depth(); ++d)
+	{
+		dmMatrixView<Scalar> m = dst(d);
+		size_t kernelSize = kernel * kernel;
+
+		for (int ki = 0; ki < kernel; ++ki)
+		{
+			for (int kj = 0; kj < kernel; ++kj)
+			{
+				size_t colIdx = 0;
+				for (int i = 0; i < m.RowCount(); ++i)
+				{
+					bool isValidI = (i + (step - ki) - int(padding) < m.RowCount())
+						&& (int(i - ki) + int(padding) >= 0);
+					for (int j = 0; isValidI && j < m.ColCount(); ++j)
+					{
+						bool isValidJ = (j + (step - kj) - int(padding) < m.ColCount())
+							&& (int(j - kj) + int(padding) >= 0);
+						if (!isValidJ)
+							continue;
+						m(i, j) += outM(rowIdx, colIdx);
+						++colIdx;
+					}
+				}
+				++rowIdx;
+			}
+		}
+	}
+}
+
 
 template <class Scalar>
 void ToRowImage(const mwTensorView<Scalar>& src,
@@ -68,6 +104,8 @@ template void ToColumnImage<double>(const mwTensorView<double>&, const size_t, c
 template void ToColumnImage<float>(const mwTensorView<float>&, const size_t, const size_t, mwTensorView<float>&);
 template void ToRowImage<double>(const mwTensorView<double>&, const size_t, const size_t, mwTensorView<double>&);
 template void ToRowImage<float>(const mwTensorView<float>&, const size_t, const size_t, mwTensorView<float>&);
+template void FromColumnImage<float>(const mwTensorView<float>&, const size_t, const size_t, mwTensorView<float>&);
+template void FromColumnImage<double>(const mwTensorView<double>&, const size_t, const size_t, mwTensorView<double>&);
 template double MovingAverage<double>(double, const size_t, double);
 template float MovingAverage<float>(float, const size_t, float);
 }

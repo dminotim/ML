@@ -13,6 +13,7 @@ struct mwConv2dLayer : public mwLayer<Scalar>
 	mwConv2dLayer(
 		const size_t featuresCount,
 		const size_t kernel,
+		const mwPaddingType type,
 		const mwTensorView<Scalar>& inputShape,
 		const std::shared_ptr<mwInitialization<Scalar>> init
 			= std::make_shared<mwHeInitialization<Scalar>>());
@@ -43,20 +44,25 @@ struct mwConv2dLayer : public mwLayer<Scalar>
 			<< m_inputShape.ColCount()
 			<< m_inputShape.Depth()
 			<< m_kernel
-			<< m_featuresCount;
+			<< m_featuresCount
+			<< int(m_padType);
 	}
 
 	template <class BinStream>
 	static std::shared_ptr<mwConv2dLayer<Scalar> > deserialize(BinStream& stream)
 	{
 		size_t rowC, colC, depth, kernel, featuresCount;
-		stream >> rowC >> colC >> depth >> kernel >> featuresCount;
+		int padType;
+		stream >> rowC >> colC >> depth >> kernel >> featuresCount >> padType;
 		auto inShape = mwTensorView<Scalar>(
 			nullptr, rowC, colC, depth);
 
 		return std::make_shared<mwConv2dLayer<Scalar>>(
-			featuresCount, kernel, inShape);
+			featuresCount, kernel, mwPaddingType(padType), inShape);
 	}
+
+	const mwPaddingType PadType() const;
+
 private:
 	mwTensorView<Scalar> m_in;
 	mwTensor<Scalar> m_out;
@@ -66,10 +72,10 @@ private:
 	mwTensorView<Scalar> m_bias;
 	mwTensorView<Scalar> m_biasGrads;
 	mwTensorView<Scalar> m_workSpace;
+	const mwPaddingType m_padType;
 	size_t m_kernel;
 	size_t m_featuresCount;
 	std::shared_ptr<mwInitialization<Scalar>> m_init;
-
 };
 
 }

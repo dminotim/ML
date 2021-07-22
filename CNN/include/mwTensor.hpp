@@ -254,6 +254,21 @@ struct mwTensorView
 		}
 	}
 
+	void MakeTransposedZeroDepth(mwTensor<Scalar>& res)
+	{
+		res = mwTensor<Scalar>(this->m_colCount, this->m_rowCount, 1);
+		mwTensorView<Scalar> resView = res.ToView();
+		dmMatrixView<Scalar> resViewM = resView(0);
+		dmMatrixView<Scalar> self = (*this)(0);
+		for (size_t i = 0; i < self.RowCount(); i++)
+		{
+			for (size_t j = 0; j < self.ColCount(); j++)
+			{
+				resViewM(j, i) = self(i, j);
+			}
+		}
+	}
+
 
 
 	Scalar* m_valuesPtr;

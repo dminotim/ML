@@ -50,7 +50,7 @@ template<typename Scalar>
 void mwZeroPaddingLayer<Scalar>::Backprop(const mwTensorView<Scalar>& nextDelta)
 {
 	mwTensorView<Scalar> outView = m_out.ToView();
-	mwTensorView<Scalar> deltaView = m_out.ToView();
+	mwTensorView<Scalar> deltaView = m_delta.ToView();
 	for (size_t feature = 0; feature < outView.Depth(); ++feature)
 	{
 		dmMatrixView<Scalar> nextDeltaMatr = nextDelta(feature);
