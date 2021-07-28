@@ -46,12 +46,13 @@ int main()
 	inStr >> a >> b;
 	std::cout << std::fixed << std::setprecision(14) <<  a <<" " <<  b << std::endl;
 	mwCNN<float> cnn;
-	cnn.Load("C:\\projects\\MyMl\\model_unet_5.bin");
+	cnn.Load("C:\\projects\\MyMl\\model_unet_10.bin");
 	std::cout << "asss 1" << std::endl;
-	std::shared_ptr<mwOptimizer<float>> optimizer = std::make_shared<mwAdamOptimizer<float>>();
+	std::shared_ptr<mwOptimizer<float>> optimizer =
+		std::make_shared<mwAdamOptimizer<float>>(float(0.001));
 
 	mwTensor<float> input(4, 4, 1);
-	mwTensor<float> tdst(9, 9, 1);
+	mwTensor<float> tdst(9, 16, 1);
 	mwTensorView<float> inputV = input.ToView();
 	for (int i = 0; i < 16; ++i)
 	{
@@ -77,15 +78,20 @@ int main()
 		dmReader::DownloadXYImage("C:\\projects\\paint_by_number\\cases2\\input\\",
 			"C:\\projects\\paint_by_number\\cases2\\output\\",
 			tesvecX, tesvecY);
-
-		auto predicted = cnn.Predict(tesvecX[0]);
-		auto img1 = dmReader::ConvertTensorToImg(predicted);
-		auto img2 = dmReader::ConvertTensorToImg(tesvecX[0].ToView());
-		clusteriser::IO::WriteImage(img1, "C:\\projects\\MyMl\\res.png");
-		clusteriser::IO::WriteImage(img2, "C:\\projects\\MyMl\\inp.png");
-		std::cout << "asss" << std::endl;
-		mwTensorView<float> inputShape(nullptr, 256, 256, 1);
-		mwUnetCreator::Create(inputShape, cnn);
+		for (size_t t = 80; t < 100; ++t)
+		{
+			auto predicted = cnn.Predict(tesvecX[t]);
+			auto img1 = dmReader::ConvertTensorToImg(predicted);
+			auto img2 = dmReader::ConvertTensorToImg(tesvecX[t].ToView());
+			clusteriser::IO::WriteImage(img1, std::string("C:\\projects\\MyMl\\res\\res")
+				+ std::to_string(t) + ".png");
+			clusteriser::IO::WriteImage(img2, std::string("C:\\projects\\MyMl\\res\\inp")
+				+ std::to_string(t) + ".png");
+			std::cout << "ass s " << t  << std::endl;
+		}
+		
+		/*mwTensorView<float> inputShape(nullptr, 256, 256, 1);
+		mwUnetCreator::Create(inputShape, cnn);*/
 		/*std::vector<mwTensor<float>> tesvecX;
 		std::vector<mwTensor<float>> tesvecY;
 		auto mnist = dmReader::DownloadMNIST<float>("C:\\projects\\MyML\\mnist_png\\training\\");
@@ -109,7 +115,7 @@ int main()
 	
 		std::cout << "Fit" << std::endl;
 		auto b = std::chrono::high_resolution_clock::now();
-		cnn.Fit(tesvecX, tesvecY, optimizer, lossMse, 20, 2);
+		cnn.Fit(tesvecX, tesvecY, optimizer, lossMse, 20, 1);
 		auto e = std::chrono::high_resolution_clock::now();
 		std::cout << "time = " << 
 			double(std::chrono::duration_cast<std::chrono::seconds>(e - b).count())/60. << std::endl;

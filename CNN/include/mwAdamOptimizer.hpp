@@ -5,7 +5,7 @@
 template<typename Scalar>
 struct mwAdamOptimizer : public mwOptimizer<Scalar>
 {
-	mwAdamOptimizer(const Scalar lr = Scalar(1e-3), const Scalar epsilon = Scalar(1e-8))
+	mwAdamOptimizer(const Scalar lr = Scalar(1e-3), const Scalar epsilon = Scalar(1e-7))
 		: m_learningRate(lr),
 		m_m(),
 		m_v(),

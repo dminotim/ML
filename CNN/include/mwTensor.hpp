@@ -1,5 +1,6 @@
 #pragma  once
 #include <vector>
+#include "cblas.h"
 
 template<class T>
 class mwVectorView
@@ -37,15 +38,15 @@ private:
 	T* m_data;
 };
 
-void gemm_nn(int M, int N, int K,
-	float* A, int lda,
-	float* B, int ldb,
-	float* C, int ldc);
-
-void gemm_nn(int M, int N, int K,
-	double* A, int lda,
-	double* B, int ldb,
-	double* C, int ldc);
+//void gemm_nn(int M, int N, int K,
+//	float* A, int lda,
+//	float* B, int ldb,
+//	float* C, int ldc);
+//
+//void gemm_nn(int M, int N, int K,
+//	double* A, int lda,
+//	double* B, int ldb,
+//	double* C, int ldc);
 
 template<class T>
 struct dmMatrixView
@@ -93,15 +94,29 @@ struct dmMatrixView
 
 		const dmMatrixView<T>& A = *this;
 		const dmMatrixView<T>& B = factors;
-		gemm_nn(A.m_rowCount,
+		cblas_sgemm(CblasRowMajor,
+			CblasNoTrans,
+			CblasNoTrans,
+			A.m_rowCount,
 			factors.m_colCount,
 			factors.m_rowCount,
-			A.m_values,
-			A.m_colCount,
-			B.m_values,
-			B.m_colCount,
-			res.m_values,
-			res.m_colCount);
+			1.0,
+			(float*)A.m_values,
+			factors.m_rowCount,
+			(float*)B.m_values,
+			factors.m_colCount,
+			0.0,
+			(float*)res.m_values,
+			factors.m_colCount);
+		//gemm_nn(A.m_rowCount,
+		//	factors.m_colCount,
+		//	factors.m_rowCount,
+		//	A.m_values,
+		//	A.m_colCount,
+		//	B.m_values,
+		//	B.m_colCount,
+		//	res.m_values,
+		//	res.m_colCount);
 		/*for (size_t i = 0; i < res.m_rowCount; ++i)
 		{
 			for (size_t j = 0; j < res.m_colCount; ++j)

@@ -87,12 +87,14 @@ void DownloadXYImage(
 	std::vector<mwTensor<Scalar>>& y)
 {
 	std::filesystem::directory_iterator end_itr;
-	for (std::filesystem::directory_iterator itr(trainXFolder); itr != end_itr; ++itr)
+	int id = 0;
+	for (std::filesystem::directory_iterator itr(trainXFolder); itr != end_itr && id < 1000; ++itr,  ++id)
 	{
 		clusteriser::dmImage img = clusteriser::IO::ReadImage(itr->path().string());
 		x.push_back(ConvertImgToTensor<Scalar>(img));
 	}
-	for (std::filesystem::directory_iterator itr(trainYFolder); itr != end_itr; ++itr)
+	id = 0;
+	for (std::filesystem::directory_iterator itr(trainYFolder); itr != end_itr && id < 1000; ++itr, ++id)
 	{
 		clusteriser::dmImage img = clusteriser::IO::ReadImage(itr->path().string());
 		y.push_back(ConvertImgToTensor<Scalar>(img));

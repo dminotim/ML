@@ -90,8 +90,16 @@ void mwCNN<Scalar>::Backprop(const mwTensorView<Scalar>& delta)
 {
 	ValidateFinalization();
 	m_layers.back()->Backprop(delta);
+	Scalar sumRes = 0;
+	auto vecD = delta.ToVectorView();
+	for (size_t j = 0; j < vecD.size(); ++j)
+	{
+		sumRes += vecD[j];
+	}
+	std::cout << "Update w " << sumRes << std::endl;
 	for (int i = int(m_layers.size()) - 2; i >= 0; i--)
 	{
+		
 		m_layers[i]->Backprop(m_layers[i + 1]->GetDerivatives());
 	}
 }
@@ -244,6 +252,7 @@ void mwCNN<Scalar>::Fit(const std::vector<mwTensor<Scalar>>& x,
 	std::vector<mwTensorView<Scalar>> xv;
 	std::vector<mwTensorView<Scalar>> yv;
 	dmReader::ConvertToTensorView(x, y, xv, yv);
+	std::cout << m_weightsSpace.size() << " weights " << std::endl;
 	for (size_t ep = 0; ep < epochCount; ++ep)
 	{
 		Scalar err = 0;
@@ -254,11 +263,11 @@ void mwCNN<Scalar>::Fit(const std::vector<mwTensor<Scalar>>& x,
 			next = std::min(start + batchSize, end);
 			const Scalar currentLoss = TrainBatch(opt, loss, xv, yv, start, next);
 			err = mwCNNUtils::MovingAverage<Scalar>(err, steps + 1, currentLoss);
-			std::cout << "epoch " << ep  << " Batch " << steps << " loss = " << err << std::endl;
+			std::cout << "epoch " << ep  << " Batch " << steps << " loss = " << currentLoss << std::endl;
 			++steps;
 		}
 		this->Save(std::string("C:\\projects\\MyMl\\model_unet_") + std::to_string(ep) + ".bin");
-		std::cout << "epoch " << ep << " loss=" << err / Scalar(steps) << std::endl;
+		std::cout << "epoch " << ep << " loss=" << err << std::endl;
 		/*if(ep % 1000 == 0)
 		std::cout << "epoch " << ep << " loss=" << err / Scalar(steps) << std::endl;*/
 	}

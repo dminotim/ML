@@ -15,6 +15,7 @@ file(GLOB ML_FILES_FOUND
 	CNN/include/*.hpp
 	CNN/src/*.cpp
     stats/layers/include/*.hpp
+	third_party/openblas/include/*.h
 	ML.cpp
     StdAfx.h)
 	
@@ -29,12 +30,16 @@ target_include_directories(ML
 		${CMAKE_CURRENT_SOURCE_DIR}/IO/include
 		${CMAKE_CURRENT_SOURCE_DIR}/stats/include
 		${CMAKE_CURRENT_SOURCE_DIR}/CNN/include
+		${CMAKE_CURRENT_SOURCE_DIR}/third_party/openblas/include
 		${CMAKE_CURRENT_SOURCE_DIR}/third_party/lodepng/include
 		${CMAKE_CURRENT_SOURCE_DIR}/stats/layers/include)
 		
 target_link_libraries(ML
     PUBLIC
+		libopenblas
         lodepng)
+add_library(libopenblas third_party/openblas/libopenblas.dll)
+set_target_properties(libopenblas PROPERTIES LINKER_LANGUAGE C)
 		
 foreach(_source ${ML_FILES_FOUND})
 	if (IS_ABSOLUTE "${_source}")

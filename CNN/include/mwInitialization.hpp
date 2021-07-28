@@ -6,7 +6,7 @@ template<typename Scalar>
 struct mwInitialization
 {
 	mwInitialization()
-		: m_engine(3574)
+		: m_engine(1)
 	{
 	}
 	virtual void Init(

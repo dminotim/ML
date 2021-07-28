@@ -4,6 +4,11 @@
 #include <complex>
 #include "mwCNNUtils.hpp"
 
+template<typename Scalar>
+Scalar Clamp(const Scalar v, const Scalar a = Scalar(1e-7), const Scalar b = Scalar(1. - 1e-7))
+{
+	return std::clamp(v, a, b);
+}
 
 template<typename Scalar>
 mwTensor<Scalar> mwCrossEntropyLossFunction<Scalar>::CalcDelta(const mwTensorView<Scalar>& values, const mwTensorView<Scalar>& expected)
@@ -14,7 +19,9 @@ mwTensor<Scalar> mwCrossEntropyLossFunction<Scalar>::CalcDelta(const mwTensorVie
 	mwVectorView<Scalar> deltaVec = delta.ToView().ToVectorView();
 	for (size_t j = 0; j < deltaVec.size(); ++j)
 	{
-		deltaVec[j] -= expectedVec[j] / (valuesVec[j]);
+		const Scalar predicted = Clamp(valuesVec[j]);
+		const Scalar trueY = Clamp(expectedVec[j]);
+		deltaVec[j] += (predicted - trueY) / (predicted * ( 1 - predicted));
 	}
 	return delta;
 }
@@ -31,10 +38,13 @@ mwTensor<Scalar> mwCrossEntropyLossFunction<Scalar>::CalcCost(
 	Scalar loss = 0;
 	for (size_t i = 0; i < expectedVec.size(); i++)
 	{
-		const float curLoss = -expectedVec[i] * std::log(valuesVec[i]);
-		loss = mwCNNUtils::MovingAverage<Scalar>(loss, i + 1, curLoss);
+		const Scalar predicted = Clamp(valuesVec[i]);
+		const Scalar trueY = Clamp(expectedVec[i]);
+		const Scalar curLoss = -(trueY * std::log(predicted)
+			+ (Scalar(1) - trueY) * std::log(Scalar(1) - predicted));
+		loss += curLoss;
 	}
-	erroVec[0] = loss * expectedVec.size();
+	erroVec[0] = loss;
 	return res;
 }
 

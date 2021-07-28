@@ -17,9 +17,10 @@ Scalar MovingAverage(Scalar avg, const size_t acc_number, Scalar value)
 template <class Scalar>
 void ToColumnImage(const mwTensorView<Scalar>& src,
 	const size_t kernel,
-	const size_t padding,
+	const size_t paddingS,
 	mwTensorView<Scalar>& dst)
 {
+	int padding = int(paddingS);
 	dmMatrixView<Scalar> outM = dst(0);
 	const size_t step = kernel - 1;
 	size_t rowIdx = 0;
@@ -33,17 +34,20 @@ void ToColumnImage(const mwTensorView<Scalar>& src,
 			for (int kj = 0; kj < kernel; ++kj)
 			{
 				size_t colIdx = 0;
-				for (int i = 0; i < m.RowCount(); ++i)
+				for (int i = -padding; i < int(m.RowCount()) + padding; ++i)
 				{
-					bool isValidI = (i + (step - ki) -int(padding) < m.RowCount())
+					bool isValidI = (i + (step - ki) -int(padding) < int(m.RowCount()))
 						&& (int(i - ki) + int(padding) >= 0);
-					for (int j = 0; isValidI && j < m.ColCount(); ++j)
+					for (int j = -padding; isValidI && j < int(m.ColCount()) + padding; ++j)
 					{
-						bool isValidJ = (j + (step - kj) - int(padding) < m.ColCount())
+						const bool isZero = (i < 0 || i >= int(m.RowCount()))
+							|| (j < 0 || j >= int(m.ColCount()));
+						bool isValidJ = (j + (step - kj) - int(padding) < int(m.ColCount()))
 							&& (int(j - kj) + int(padding) >= 0);
 						if(!isValidJ)
 							continue;
-						outM(rowIdx, colIdx) = m(i, j);
+						outM(rowIdx, colIdx) = isZero ? 0 : m(i, j);
+
 						++colIdx;
 					}
 				}
@@ -54,8 +58,9 @@ void ToColumnImage(const mwTensorView<Scalar>& src,
 }
 
 template <class Scalar>
-void FromColumnImage(const mwTensorView<Scalar>& srcCol, const size_t kernel, const size_t padding, mwTensorView<Scalar>& dst)
+void FromColumnImage(const mwTensorView<Scalar>& srcCol, const size_t kernel, const size_t paddingS, mwTensorView<Scalar>& dst)
 {
+	int padding = int(paddingS);
 	dmMatrixView<Scalar> outM = srcCol(0);
 	const size_t step = kernel - 1;
 	size_t rowIdx = 0;
@@ -69,16 +74,23 @@ void FromColumnImage(const mwTensorView<Scalar>& srcCol, const size_t kernel, co
 			for (int kj = 0; kj < kernel; ++kj)
 			{
 				size_t colIdx = 0;
-				for (int i = 0; i < m.RowCount(); ++i)
+				for (int i = -padding; i < int(m.RowCount()) + padding; ++i)
 				{
-					bool isValidI = (i + (step - ki) - int(padding) < m.RowCount())
+					bool isValidI = (i + (step - ki) - int(padding) < int(m.RowCount()))
 						&& (int(i - ki) + int(padding) >= 0);
-					for (int j = 0; isValidI && j < m.ColCount(); ++j)
+					for (int j = -padding; isValidI && j < int(m.ColCount()) + padding; ++j)
 					{
-						bool isValidJ = (j + (step - kj) - int(padding) < m.ColCount())
+						const bool isZero = (i < 0 || i >= int(m.RowCount()))
+							|| (j < 0 || j >= int(m.ColCount()));
+						bool isValidJ = (j + (step - kj) - int(padding) < int(m.ColCount()))
 							&& (int(j - kj) + int(padding) >= 0);
 						if (!isValidJ)
 							continue;
+						if (isZero)
+						{
+							++colIdx;
+							continue;
+						}
 						m(i, j) += outM(rowIdx, colIdx);
 						++colIdx;
 					}

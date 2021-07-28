@@ -76,6 +76,7 @@ size_t mwConv2dLayer<Scalar>::FeaturesCount() const { return m_featuresCount; }
 template<typename Scalar>
 void mwConv2dLayer<Scalar>::Init()
 {
+	std::cout << "Conv2 layer " << m_weights.Size() + m_bias.Size() << std::endl;
 	m_init->Init(m_weights.Size(), m_weights);
 	m_init->Init(m_bias.Size(), m_bias);
 }

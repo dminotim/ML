@@ -48,10 +48,12 @@ void mwSigmoid<Scalar>::Backprop(const mwTensorView<Scalar>& nextDelta)
 {
 	mwVectorView<Scalar> deltaVec = m_delta.ToView().ToVectorView();
 	mwVectorView<Scalar> nextDeltaVec = nextDelta.ToVectorView();
-	mwVectorView<Scalar> inputVec = m_in.ToVectorView();
+	//mwVectorView<Scalar> inputVec = m_in.ToVectorView();
+
+	mwVectorView<Scalar> outVec = m_out.ToView().ToVectorView();
 	for (size_t i = 0; i < nextDeltaVec.size(); ++i)
 	{
-		deltaVec[i] += inputVec[i] * (1.0f - inputVec[i]);
+		deltaVec[i] += outVec[i] * (Scalar(1) - outVec[i]) * nextDeltaVec[i];
 	}
 }
 
@@ -68,7 +70,7 @@ void mwSigmoid<Scalar>::Forward(const mwTensorView<Scalar>& input)
 	mwVectorView<Scalar> outVec = m_out.ToView().ToVectorView();
 	for (size_t i = 0; i < inputVec.size(); ++i)
 	{
-		outVec[i] = Scalar(1) / (Scalar(1) + std::exp(-Scalar(1) * inputVec[i]));
+		outVec[i] = Scalar(1) / (Scalar(1) + std::exp(Scalar(-1) * inputVec[i]));
 	}
 }
 
